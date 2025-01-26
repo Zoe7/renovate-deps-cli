@@ -2,6 +2,11 @@ import { Octokit } from "@octokit/rest";
 import { userConfig } from "../../utils/config.js";
 import chalk from "chalk";
 
+const singlePackageRegex =
+  /Update dependency ([^\s]+) from ([^\s]+) to ([^\]\s]+)(?:\]\(\.\.\/pull\/(\d+)\))?/g;
+const monorepoRegex =
+  /Update ([^\s]+) monorepo.*\(\s*`([^`]*)`\s*(?:,\s*`([^`]*)`\s*)*\)(?:.*\/pull\/(\d+))?/g;
+
 export async function listRepositories() {
   const octokit = new Octokit({
     auth: userConfig.githubToken.get(),
@@ -23,5 +28,62 @@ export async function listRepositories() {
   console.log("");
   for (const repo of repos) {
     console.log(chalk.white(`- ${repo.full_name}`));
+
+    const issues = (
+      await octokit.paginate(octokit.issues.listForRepo, {
+        repo: repo.name,
+        owner: repo.owner.login,
+        creator: "renovate[bot]",
+      })
+    ).filter(
+      (issue) =>
+        issue.pull_request === undefined &&
+        issue.title.includes("Dependency Dashboard")
+    );
+
+    // no issues
+    if (issues.length === 0) {
+      console.log(chalk.yellow("  - Not using Renovate"));
+      continue;
+    }
+
+    // only one issue per repository
+    if (issues.length > 1) {
+      console.log(
+        chalk.yellow(
+          `- ${issues.length} issues found. We should only have one issue per repository. Skipping this one.`
+        )
+      );
+      continue;
+    }
+
+    for (const issue of issues) {
+      if (!issue.body) {
+        console.log(
+          chalk.yellow(
+            "no issue body, skipping",
+            `- ${issue.title} - ${issue.user?.login}`
+          )
+        );
+        continue;
+      }
+
+      let match = issue.body.match(singlePackageRegex);
+
+      while ((match = singlePackageRegex.exec(issue.body)) !== null) {
+        const [_, packageName, fromVersion, toVersion, pullRequestNumber] =
+          match;
+
+        console.log(
+          chalk.green(
+            `${`  - Update ${packageName} from ${fromVersion} to ${toVersion}`} - ${
+              pullRequestNumber
+                ? `${repo.html_url}/pull/${pullRequestNumber}`
+                : ""
+            }`
+          )
+        );
+      }
+    }
   }
 }
