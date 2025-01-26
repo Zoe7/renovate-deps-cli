@@ -7,13 +7,9 @@ export async function listRepositories() {
     auth: userConfig.githubToken.get(),
   });
 
-  const repos = await octokit.repos
-    .listForAuthenticatedUser({
-      visibility: "all",
-    })
-    .then((response) =>
-      response.data.filter((repo) => repo.archived === false)
-    );
+  const repos = (
+    await octokit.paginate(octokit.repos.listForAuthenticatedUser)
+  ).filter((repo) => repo.archived === false);
 
   console.log("");
   console.log(
