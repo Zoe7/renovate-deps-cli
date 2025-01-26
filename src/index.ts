@@ -4,6 +4,7 @@ import { userConfig } from "./utils/config.js";
 import { init } from "./commands/init/init.js";
 import { listRepositories } from "./commands/listRepositories/listRepositories.js";
 import { cleanup } from "./commands/cleanup/cleanup.js";
+import { withExitPromptErrorHandling } from "./utils/withExitPromptErrorHandling.js";
 
 const program = new Command();
 
@@ -14,21 +15,21 @@ program
 
 program
   .command("init")
-  .action(init)
+  .action(withExitPromptErrorHandling(init))
   .description(
     "Set up the CLI and all the configuration it is going to need to work."
   );
 
 program
   .command("list-repos")
-  .action(listRepositories)
+  .action(withExitPromptErrorHandling(listRepositories))
   .description(
     "List all the repositories accessible by the CLI based on your configuration"
   );
 
 program
   .command("cleanup")
-  .action(cleanup)
+  .action(withExitPromptErrorHandling(cleanup))
   .description(
     "Cleanup the persisted configuration used by the CLI from your machine"
   );
