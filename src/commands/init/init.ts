@@ -7,18 +7,18 @@ import { symbols } from "../../utils/symbols.js";
 export async function init() {
   // Prompt the user for their GitHub token
   const githubToken = userConfig.githubToken.get();
-  let shouldPromptGithubToken = true;
+  let keepExistingToken = false;
   // user has already set a token, we can re-use the existing one
   if (githubToken) {
     console.log("");
-    shouldPromptGithubToken = await confirm({
+    keepExistingToken = await confirm({
       message:
-        "Your Github token has already been set, do you want to replace it with a new one?",
-      default: false,
+        "Your Github token has already been set, do you want to keep using that token?",
+      default: true,
     });
   }
 
-  if (shouldPromptGithubToken) {
+  if (!keepExistingToken) {
     console.log("");
     console.log(
       chalk.white(
