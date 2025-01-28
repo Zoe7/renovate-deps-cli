@@ -43,18 +43,3 @@ program
   .description("Run the CLI");
 
 program.parse(process.argv);
-
-// wrap all user prompts in this
-// try {
-//   let nextDemo = await askNextDemo();
-//   while (nextDemo !== 'exit') {
-//     await demos[nextDemo]();
-//     nextDemo = await askNextDemo();
-//   }
-// } catch (error) {
-//   if (error instanceof Error && error.name === 'ExitPromptError') {
-//     // noop; silence this error
-//   } else {
-//     throw error;
-//   }
-// }
