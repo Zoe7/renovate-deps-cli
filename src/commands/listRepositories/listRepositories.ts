@@ -1,6 +1,7 @@
 import { Octokit } from "@octokit/rest";
 import { userConfig } from "../../utils/config.js";
 import chalk from "chalk";
+import { z } from "zod";
 
 const singlePackageRegex =
   /Update dependency ([^\s]+) from ([^\s]+) to ([^\]\s]+)(?:\]\(\.\.\/pull\/(\d+)\))?/g;
@@ -11,9 +12,18 @@ type Repository = Awaited<
   ReturnType<Octokit["repos"]["listForAuthenticatedUser"]>
 >["data"][number];
 
-export async function listRepositories() {
-  const org = userConfig.defaultOrg.get();
-  const renovateGithubAuthor = userConfig.defaultRenovateGithubAuthor.get();
+export async function listRepositories(args: unknown) {
+  const options = z
+    .object({
+      org: z.string().optional(),
+      renovateGithubAuthor: z.string().optional(),
+    })
+    .parse(args);
+
+  const org = options.org ?? userConfig.defaultOrg.get();
+  const renovateGithubAuthor =
+    options.renovateGithubAuthor ??
+    userConfig.defaultRenovateGithubAuthor.get();
 
   const octokit = new Octokit({
     auth: userConfig.githubToken.get(),
@@ -39,7 +49,7 @@ export async function listRepositories() {
     chalk.white(
       `Found ${repos.length} repository${
         repos.length > 1 ? "s" : ""
-      } accessible by the CLI using your current configuration.`
+      } accessible by the CLI using the given configuration options.`
     )
   );
 

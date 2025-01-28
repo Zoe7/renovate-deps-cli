@@ -22,6 +22,14 @@ program
 
 program
   .command("list-repos")
+  .option(
+    "-o, --org <organization>",
+    "The Github organization to filter the repositories by"
+  )
+  .option(
+    "-r, --renovate-github-author <renovateGithubAuthor>",
+    "The Github username of the renovate bot to filter the repositories by"
+  )
   .action(withExitPromptErrorHandling(listRepositories))
   .description(
     "List all the repositories accessible by the CLI based on your configuration"
