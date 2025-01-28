@@ -7,14 +7,32 @@ const singlePackageRegex =
 const monorepoRegex =
   /Update ([^\s]+) monorepo.*\(\s*`([^`]*)`\s*(?:,\s*`([^`]*)`\s*)*\)(?:.*\/pull\/(\d+))?/g;
 
+type Repository = Awaited<
+  ReturnType<Octokit["repos"]["listForAuthenticatedUser"]>
+>["data"][number];
+
 export async function listRepositories() {
+  const org = userConfig.defaultOrg.get();
+  const renovateGithubAuthor = userConfig.defaultRenovateGithubAuthor.get();
+
   const octokit = new Octokit({
     auth: userConfig.githubToken.get(),
   });
 
   const repos = (
     await octokit.paginate(octokit.repos.listForAuthenticatedUser)
-  ).filter((repo) => repo.archived === false);
+  ).filter((repo) => {
+    const conditions: ((repo: Repository) => boolean)[] = [
+      // default conditions we want to be true for every repo
+      (repo) => repo.archived === false,
+    ];
+
+    if (org) {
+      conditions.push((repo) => repo.owner.login === org);
+    }
+
+    return conditions.every((condition) => condition(repo));
+  });
 
   console.log("");
   console.log(
@@ -33,7 +51,7 @@ export async function listRepositories() {
       await octokit.paginate(octokit.issues.listForRepo, {
         repo: repo.name,
         owner: repo.owner.login,
-        creator: "renovate[bot]",
+        creator: renovateGithubAuthor,
       })
     ).filter(
       (issue) =>

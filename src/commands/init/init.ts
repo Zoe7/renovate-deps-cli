@@ -1,7 +1,7 @@
-import { confirm, password } from "@inquirer/prompts";
+import { confirm, input, password } from "@inquirer/prompts";
 import { userConfig } from "../../utils/config.js";
 import chalk from "chalk";
-import { z } from "zod";
+import { string, z } from "zod";
 import { symbols } from "../../utils/symbols.js";
 
 export async function init() {
@@ -13,7 +13,7 @@ export async function init() {
     console.log("");
     keepExistingToken = await confirm({
       message:
-        "Your Github token has already been set, do you want to keep using that token?",
+        "Your GitHub token is already set. Continue using the same token?",
       default: true,
     });
   }
@@ -55,6 +55,43 @@ export async function init() {
     });
     userConfig.githubToken.set(promptedGithubToken);
   }
+
+  console.log("");
+  console.log("Set your CLI defaults for faster commands!");
+  console.log("");
+  console.log(
+    "To streamline your experience, you can configure default values for the CLI to use."
+  );
+  console.log(
+    "These defaults will automatically be applied when searching through repositories, so you don't have to set them manually on every command."
+  );
+  console.log(
+    "You can always override these parameters on a per-command basis if needed."
+  );
+
+  console.log("");
+  const org = await input({
+    message: "Github organization (optional):",
+  });
+
+  if (org.length > 0) {
+    userConfig.defaultOrg.set(org);
+  }
+
+  console.log("");
+  const defaultRenovateGithubAuthor = await input({
+    message: "Renovate GitHub author:",
+    default: "renovate[bot]",
+    validate: (input) => {
+      if (z.string().min(1).safeParse(input).success) {
+        return true;
+      } else {
+        return "Please enter a valid Renovate GitHub author.";
+      }
+    },
+  });
+
+  userConfig.defaultRenovateGithubAuthor.set(defaultRenovateGithubAuthor);
 
   console.log("");
   console.log(
