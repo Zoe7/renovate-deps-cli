@@ -5,10 +5,8 @@ import { logger } from "../../utils/logger.js";
 import chalk from "chalk";
 import ora from "ora";
 
-const singlePackageRegex =
-  /Update dependency ([^\s]+) from ([^\s]+) to ([^\]\s]+)(?:\]\(\.\.\/pull\/(\d+)\))?/g;
-const monorepoRegex =
-  /Update (?<monorepo>[^\s]+) (?:monorepo )?(?:from (?<from_version>\d+\.\d+\.\d+))? (?:to (?<to_version>\d+\.\d+\.\d+))? \((?<update_type>major|minor|patch)\)(?:\]\(\.\.\/pull\/(?<pull_request>\d+)\))? \((?<packages>`[^`]+`(?:, `[^`]+`)*)\)/g;
+const regex =
+  /Update (?:dependency )?(?<dependency>[^\s]+ )(?:monorepo )?(?:from (?<fromVersion>v?\d+\.\d+\.\d+) to (?<toVersion>v?\d+\.\d+\.\d+))?(\]| |)(\((?<updateType>major|minor|patch)\))?(\]| |)(?:\(\.\.\/pull\/(?<pullRequest>\d+)\) ?)(\((?<packages>`[^`]+`(?:, `[^`]+`)*)\))?/g;
 
 type Repository = Awaited<
   ReturnType<Octokit["repos"]["listForAuthenticatedUser"]>
@@ -111,39 +109,25 @@ export async function listRepositories(args: unknown) {
         chalk.cyan(`${repo.full_name} - ${chalk.underline(issue.html_url)}`)
       );
 
-      const singlePackagesMatch = issue.body.matchAll(singlePackageRegex);
-      for (const match of singlePackagesMatch) {
-        const [_, packageName, fromVersion, toVersion, pullRequestNumber] =
-          match;
-
-        const logInfo = [
-          `  - Update ${packageName} from ${fromVersion} to ${toVersion}`,
-          pullRequestNumber
-            ? `- ${chalk.underline(
-                `${repo.html_url}/pull/${pullRequestNumber}`
-              )}`
-            : "",
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-        logger.info(logInfo);
-      }
-
-      const monorepoMatch = issue.body.matchAll(monorepoRegex);
-      for (const match of monorepoMatch) {
-        const [
-          _,
-          monorepo,
+      const regexMatches = issue.body.matchAll(regex);
+      for (const regexMatch of regexMatches) {
+        if (!regexMatch.groups || !regexMatch.groups["dependency"]) {
+          logger.debug(
+            "  Did not find any dependencies to update in the issue body."
+          );
+          continue;
+        }
+        const {
+          dependency,
           fromVersion,
           toVersion,
           updateType,
           pullRequest,
           packages,
-        ] = match;
+        } = regexMatch.groups;
 
         const logInfo = [
-          `  - Update ${monorepo}`,
+          `  - Update ${dependency.trim()}`,
           fromVersion && toVersion
             ? `from ${fromVersion} to ${toVersion}`
             : updateType
@@ -153,12 +137,12 @@ export async function listRepositories(args: unknown) {
             ? chalk.gray(
                 `[${packages
                   .split(", ")
-                  .map((pkg: any) => pkg.replace(/`/g, "").trim())
+                  .map((pkg) => pkg.replace(/`/g, "").trim())
                   .join(", ")}]`
               )
             : null,
           pullRequest
-            ? chalk.underline(`${repo.html_url}/pull/${pullRequest}`)
+            ? `- ${chalk.underline(`${repo.html_url}/pull/${pullRequest}`)}`
             : null,
         ]
           .filter(Boolean)
