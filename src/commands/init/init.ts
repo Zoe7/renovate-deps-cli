@@ -3,6 +3,7 @@ import { userConfig } from "../../utils/config.js";
 import chalk from "chalk";
 import { z } from "zod";
 import { symbols } from "../../utils/symbols.js";
+import { logger } from "../../utils/logger.js";
 
 export async function init() {
   // Prompt the user for their GitHub token
@@ -10,7 +11,7 @@ export async function init() {
   let keepExistingToken = false;
   // user has already set a token, we can re-use the existing one
   if (githubToken) {
-    console.log("");
+    logger.info("");
     keepExistingToken = await confirm({
       message:
         "Your GitHub token is already set. Continue using the same token?",
@@ -19,27 +20,21 @@ export async function init() {
   }
 
   if (!keepExistingToken) {
-    console.log("");
-    console.log(
-      chalk.white(
-        "To let the CLI pull data from your repositories and authenticate with GitHub, it will need a",
-        chalk.bold("Personal Access Token"),
-        "(classic)."
+    logger.info("");
+    logger.info(
+      "To let the CLI pull data from your repositories and authenticate with GitHub, it will need a",
+      chalk.bold("Personal Access Token"),
+      "(classic)."
+    );
+    logger.info(
+      "Learn more about GitHub tokens and how to create one here:",
+      chalk.underline(
+        "https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token"
       )
     );
-    console.log(
-      chalk.white(
-        "Learn more about GitHub tokens and how to create one here:",
-        chalk.underline(
-          "https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token"
-        )
-      )
-    );
-    console.log(
-      chalk.white(
-        "\nPlease ensure the token has the following scope enabled:\n" +
-          "- repo (to access your repositories)\n"
-      )
+    logger.info(
+      "\nPlease ensure the token has the following scope enabled:\n" +
+        "- repo (to access your repositories)\n"
     );
 
     const promptedGithubToken = await password({
@@ -56,20 +51,20 @@ export async function init() {
     userConfig.githubToken.set(promptedGithubToken);
   }
 
-  console.log("");
-  console.log("Set your CLI defaults for faster commands!");
-  console.log("");
-  console.log(
+  logger.info("");
+  logger.info("Set your CLI defaults for faster commands!");
+  logger.info("");
+  logger.info(
     "To streamline your experience, you can configure default values for the CLI to use."
   );
-  console.log(
+  logger.info(
     "These defaults will automatically be applied when searching through repositories, so you don't have to set them manually on every command."
   );
-  console.log(
+  logger.info(
     "You can always override these parameters on a per-command basis if needed."
   );
 
-  console.log("");
+  logger.info("");
   const org = await input({
     message: "Github organization (optional):",
   });
@@ -80,7 +75,7 @@ export async function init() {
     userConfig.defaultOrg.delete();
   }
 
-  console.log("");
+  logger.info("");
   const defaultRenovateGithubAuthor = await input({
     message: "Renovate GitHub author:",
     default: "renovate[bot]",
@@ -95,8 +90,6 @@ export async function init() {
 
   userConfig.defaultRenovateGithubAuthor.set(defaultRenovateGithubAuthor);
 
-  console.log("");
-  console.log(
-    chalk.green(symbols.success, "Setup complete, you can now use the CLI.")
-  );
+  logger.info("");
+  logger.success("Setup complete, you can now use the CLI.");
 }

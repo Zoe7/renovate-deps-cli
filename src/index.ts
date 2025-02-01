@@ -5,6 +5,8 @@ import { init } from "./commands/init/init.js";
 import { listRepositories } from "./commands/listRepositories/listRepositories.js";
 import { cleanup } from "./commands/cleanup/cleanup.js";
 import { withExitPromptErrorHandling } from "./utils/withExitPromptErrorHandling.js";
+import { withVerboseLogging } from "./utils/withVerboseLogging.js";
+import { logger } from "./utils/logger.js";
 
 const program = new Command();
 
@@ -30,7 +32,8 @@ program
     "-r, --renovate-github-author <renovateGithubAuthor>",
     "The Github username of the renovate bot to filter the repositories by"
   )
-  .action(withExitPromptErrorHandling(listRepositories))
+  .option("--verbose", "Print additional debug information to the console")
+  .action(withExitPromptErrorHandling(withVerboseLogging(listRepositories)))
   .description(
     "List all the repositories accessible by the CLI based on your configuration"
   );

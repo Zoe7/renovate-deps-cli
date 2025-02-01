@@ -1,7 +1,7 @@
 import { Octokit } from "@octokit/rest";
 import { userConfig } from "../../utils/config.js";
-import chalk from "chalk";
 import { z } from "zod";
+import { logger } from "../../utils/logger.js";
 
 const singlePackageRegex =
   /Update dependency ([^\s]+) from ([^\s]+) to ([^\]\s]+)(?:\]\(\.\.\/pull\/(\d+)\))?/g;
@@ -44,19 +44,15 @@ export async function listRepositories(args: unknown) {
     return conditions.every((condition) => condition(repo));
   });
 
-  console.log("");
-  console.log(
-    chalk.white(
-      `Found ${repos.length} repository${
-        repos.length > 1 ? "s" : ""
-      } accessible by the CLI using the given configuration options.`
-    )
+  logger.debug("");
+  logger.debug(
+    `Found ${repos.length} repository${
+      repos.length > 1 ? "s" : ""
+    } accessible by the CLI using the given configuration options.`
   );
+  logger.debug("");
 
-  console.log("");
   for (const repo of repos) {
-    console.log(chalk.white(`- ${repo.full_name}`));
-
     const issues = (
       await octokit.paginate(octokit.issues.listForRepo, {
         repo: repo.name,
@@ -71,47 +67,51 @@ export async function listRepositories(args: unknown) {
 
     // no issues
     if (issues.length === 0) {
-      console.log(chalk.yellow("  - Not using Renovate"));
+      logger.debug("");
+      logger.debug(`${repo.full_name}`);
+      logger.debug("  Not using Renovate");
       continue;
     }
 
     // only one issue per repository
     if (issues.length > 1) {
-      console.log(
-        chalk.yellow(
-          `- ${issues.length} issues found. We should only have one issue per repository. Skipping this one.`
-        )
+      logger.debug("");
+      logger.debug(`${repo.full_name}`);
+      logger.debug(
+        `  ${issues.length} dependency dashboard issues found. There should only be one per repository. Skipping this repository.`
       );
       continue;
     }
 
     for (const issue of issues) {
       if (!issue.body) {
-        console.log(
-          chalk.yellow(
-            "no issue body, skipping",
-            `- ${issue.title} - ${issue.user?.login}`
-          )
+        logger.debug("");
+        logger.debug(`${repo.full_name}`);
+        logger.debug(`  issue: ${issue.title} - ${issue.user?.login}`);
+        logger.debug(
+          `  dependency dashboard body is unavailable. Can't retrieve list of updates. Skipping this repository.`
         );
         continue;
       }
 
       let match = issue.body.match(singlePackageRegex);
 
+      logger.info("");
+      logger.info(`${repo.full_name}`);
+
       while ((match = singlePackageRegex.exec(issue.body)) !== null) {
         const [_, packageName, fromVersion, toVersion, pullRequestNumber] =
           match;
 
-        console.log(
-          chalk.green(
-            `${`  - Update ${packageName} from ${fromVersion} to ${toVersion}`} - ${
-              pullRequestNumber
-                ? `${repo.html_url}/pull/${pullRequestNumber}`
-                : ""
-            }`
-          )
+        logger.info(
+          `  - Update ${packageName} from ${fromVersion} to ${toVersion} - ${
+            pullRequestNumber
+              ? `${repo.html_url}/pull/${pullRequestNumber}`
+              : ""
+          }`
         );
       }
+      logger.info("");
     }
   }
 }
