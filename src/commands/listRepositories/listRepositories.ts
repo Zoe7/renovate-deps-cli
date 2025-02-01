@@ -2,6 +2,7 @@ import { Octokit } from "@octokit/rest";
 import { userConfig } from "../../utils/config.js";
 import { z } from "zod";
 import { logger } from "../../utils/logger.js";
+import chalk from "chalk";
 
 const singlePackageRegex =
   /Update dependency ([^\s]+) from ([^\s]+) to ([^\]\s]+)(?:\]\(\.\.\/pull\/(\d+)\))?/g;
@@ -106,7 +107,7 @@ export async function listRepositories(args: unknown) {
         logger.info(
           `  - Update ${packageName} from ${fromVersion} to ${toVersion} - ${
             pullRequestNumber
-              ? `${repo.html_url}/pull/${pullRequestNumber}`
+              ? chalk.underline(`${repo.html_url}/pull/${pullRequestNumber}`)
               : ""
           }`
         );
