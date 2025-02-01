@@ -95,12 +95,11 @@ export async function listRepositories(args: unknown) {
         continue;
       }
 
-      let match = issue.body.match(singlePackageRegex);
-
       logger.info("");
       logger.info(`${repo.full_name}`);
 
-      while ((match = singlePackageRegex.exec(issue.body)) !== null) {
+      const singlePackagesMatch = issue.body.matchAll(singlePackageRegex);
+      for (const match of singlePackagesMatch) {
         const [_, packageName, fromVersion, toVersion, pullRequestNumber] =
           match;
 
