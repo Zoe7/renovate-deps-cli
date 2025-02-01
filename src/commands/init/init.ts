@@ -1,7 +1,7 @@
 import { confirm, input, password } from "@inquirer/prompts";
 import { userConfig } from "../../utils/config.js";
 import chalk from "chalk";
-import { string, z } from "zod";
+import { z } from "zod";
 import { symbols } from "../../utils/symbols.js";
 
 export async function init() {
@@ -76,6 +76,8 @@ export async function init() {
 
   if (org.length > 0) {
     userConfig.defaultOrg.set(org);
+  } else {
+    userConfig.defaultOrg.delete();
   }
 
   console.log("");

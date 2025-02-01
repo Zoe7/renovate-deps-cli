@@ -10,6 +10,7 @@ export const userConfig = {
       return z.string().optional().parse(token);
     },
     set: (token: string) => config.set("githubToken", token),
+    delete: () => config.delete("githubToken"),
   },
   defaultOrg: {
     get: () => {
@@ -17,6 +18,7 @@ export const userConfig = {
       return z.string().optional().parse(org);
     },
     set: (org: string) => config.set("defaultOrg", org),
+    delete: () => config.delete("defaultOrg"),
   },
   defaultRenovateGithubAuthor: {
     get: () => {
@@ -24,6 +26,7 @@ export const userConfig = {
       return z.string().parse(author);
     },
     set: (author: string) => config.set("defaultRenovateAuthor", author),
+    delete: () => config.delete("defaultRenovateAuthor"),
   },
 };
 

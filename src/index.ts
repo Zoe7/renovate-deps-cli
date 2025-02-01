@@ -46,7 +46,11 @@ program
 program
   .command("checkConfig")
   .action(() => {
-    console.log(`githubToken: ${userConfig.githubToken.get()}`);
+    logger.info(`githubToken: ${userConfig.githubToken.get()}`);
+    logger.info(
+      `defaultRenovateGithubAuthor: ${userConfig.defaultRenovateGithubAuthor.get()}`
+    );
+    logger.info(`defaultOrg: ${userConfig.defaultOrg.get()}`);
   })
   .description("Run the CLI");
 
