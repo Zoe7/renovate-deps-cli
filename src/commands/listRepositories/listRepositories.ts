@@ -8,7 +8,7 @@ import ora from "ora";
 const singlePackageRegex =
   /Update dependency ([^\s]+) from ([^\s]+) to ([^\]\s]+)(?:\]\(\.\.\/pull\/(\d+)\))?/g;
 const monorepoRegex =
-  /Update ([^\s]+) monorepo.*\(\s*`([^`]*)`\s*(?:,\s*`([^`]*)`\s*)*\)(?:.*\/pull\/(\d+))?/g;
+  /Update (?<monorepo>[^\s]+) (?:monorepo )?(?:from (?<from_version>\d+\.\d+\.\d+))? (?:to (?<to_version>\d+\.\d+\.\d+))? \((?<update_type>major|minor|patch)\)\]\(\.\.\/pull\/(?<pull_request>\d+)\) \((?<packages>`[^`]+`(?:, `[^`]+`)*)\)/g;
 
 type Repository = Awaited<
   ReturnType<Octokit["repos"]["listForAuthenticatedUser"]>
@@ -107,22 +107,65 @@ export async function listRepositories(args: unknown) {
       }
 
       logger.info("");
-      logger.info(`${repo.full_name}`);
+      logger.info(
+        chalk.cyan(`${repo.full_name} - ${chalk.underline(issue.html_url)}`)
+      );
 
       const singlePackagesMatch = issue.body.matchAll(singlePackageRegex);
       for (const match of singlePackagesMatch) {
         const [_, packageName, fromVersion, toVersion, pullRequestNumber] =
           match;
 
-        logger.info(
-          `  - Update ${packageName} from ${fromVersion} to ${toVersion} - ${
-            pullRequestNumber
-              ? chalk.underline(`${repo.html_url}/pull/${pullRequestNumber}`)
-              : ""
-          }`
-        );
+        const logInfo = [
+          `  - Update ${packageName} from ${fromVersion} to ${toVersion}`,
+          pullRequestNumber
+            ? `- ${chalk.underline(
+                `${repo.html_url}/pull/${pullRequestNumber}`
+              )}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        logger.info(logInfo);
       }
-      logger.info("");
+
+      const monorepoMatch = issue.body.matchAll(monorepoRegex);
+      for (const match of monorepoMatch) {
+        const [
+          _,
+          monorepo,
+          fromVersion,
+          toVersion,
+          updateType,
+          pullRequest,
+          packages,
+        ] = match;
+
+        const logInfo = [
+          `  - Update ${monorepo}`,
+          fromVersion && toVersion
+            ? `from ${fromVersion} to ${toVersion}`
+            : updateType
+            ? `(${updateType})`
+            : null,
+          packages
+            ? chalk.gray(
+                `[${packages
+                  .split(", ")
+                  .map((pkg: any) => pkg.replace(/`/g, "").trim())
+                  .join(", ")}]`
+              )
+            : null,
+          pullRequest
+            ? chalk.underline(`${repo.html_url}/pull/${pullRequest}`)
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        logger.info(logInfo);
+      }
     }
   }
 }
