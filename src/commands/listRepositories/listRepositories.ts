@@ -3,6 +3,7 @@ import { userConfig } from "../../utils/config.js";
 import { z } from "zod";
 import { logger } from "../../utils/logger.js";
 import chalk from "chalk";
+import ora from "ora";
 
 const singlePackageRegex =
   /Update dependency ([^\s]+) from ([^\s]+) to ([^\]\s]+)(?:\]\(\.\.\/pull\/(\d+)\))?/g;
@@ -14,6 +15,10 @@ type Repository = Awaited<
 >["data"][number];
 
 export async function listRepositories(args: unknown) {
+  const fetchingReposSpinner = ora(
+    "Fetching list of repositories to analyze"
+  ).start();
+
   const options = z
     .object({
       org: z.string().optional(),
@@ -52,8 +57,12 @@ export async function listRepositories(args: unknown) {
     } accessible by the CLI using the given configuration options.`
   );
   logger.debug("");
+  fetchingReposSpinner.stop();
 
   for (const repo of repos) {
+    const fetchingDependencyDashboardSpinner = ora(
+      `Fetching dependency dashboard for ${repo.full_name}`
+    ).start();
     const issues = (
       await octokit.paginate(octokit.issues.listForRepo, {
         repo: repo.name,
@@ -65,6 +74,8 @@ export async function listRepositories(args: unknown) {
         issue.pull_request === undefined &&
         issue.title.includes("Dependency Dashboard")
     );
+
+    fetchingDependencyDashboardSpinner.stop();
 
     // no issues
     if (issues.length === 0) {
