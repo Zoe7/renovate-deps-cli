@@ -8,7 +8,7 @@ import ora from "ora";
 const singlePackageRegex =
   /Update dependency ([^\s]+) from ([^\s]+) to ([^\]\s]+)(?:\]\(\.\.\/pull\/(\d+)\))?/g;
 const monorepoRegex =
-  /Update (?<monorepo>[^\s]+) (?:monorepo )?(?:from (?<from_version>\d+\.\d+\.\d+))? (?:to (?<to_version>\d+\.\d+\.\d+))? \((?<update_type>major|minor|patch)\)\]\(\.\.\/pull\/(?<pull_request>\d+)\) \((?<packages>`[^`]+`(?:, `[^`]+`)*)\)/g;
+  /Update (?<monorepo>[^\s]+) (?:monorepo )?(?:from (?<from_version>\d+\.\d+\.\d+))? (?:to (?<to_version>\d+\.\d+\.\d+))? \((?<update_type>major|minor|patch)\)(?:\]\(\.\.\/pull\/(?<pull_request>\d+)\))? \((?<packages>`[^`]+`(?:, `[^`]+`)*)\)/g;
 
 type Repository = Awaited<
   ReturnType<Octokit["repos"]["listForAuthenticatedUser"]>
