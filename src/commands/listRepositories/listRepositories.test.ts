@@ -8,38 +8,97 @@ interface UpdateInfo {
   pullRequest: string | null;
   packages: string[];
 }
-const pattern =
-  /Update (?:dependency )?(?<dependency>[^\s]+ )(?:monorepo )?(?:from (?<fromVersion>v?\d+\.\d+\.\d+) to (?<toVersion>v?\d+\.\d+\.\d+))?(\]| |)(\((?<updateType>major|minor|patch)\))?(\]| |)(?:\(\.\.\/pull\/(?<pullRequest>\d+)\) ?)(\((?<packages>`[^`]+`(?:, `[^`]+`)*)\))?/g;
+
+class InfoExtractor {
+  public info: UpdateInfo;
+  private message: string;
+
+  constructor() {
+    this.info = {
+      dependency: "",
+      fromVersion: null,
+      toVersion: null,
+      updateType: null,
+      pullRequest: null,
+      packages: [],
+    }
+    this.message = "";
+  }
+
+  extract(message: string) {
+    this.info = {
+      dependency: "",
+      fromVersion: null,
+      toVersion: null,
+      updateType: null,
+      pullRequest: null,
+      packages: [],
+    }
+    this.message = message;
+
+    this.extractPullRequest();
+    this.extractUpdateType();
+    this.extractPackages();
+    this.extractVersions();
+    this.extractDependency();
+  }
+
+  private extractPullRequest() {
+    const regex = /\[(.+)]\(\.\.\/pull\/(\d+)\)(.*)/g
+    const match = regex.exec(this.message);
+    if (match) {
+      this.info.pullRequest = match[2] as string;
+      this.message = match[1] as string + match[3] as string;
+    }
+  }
+
+  private extractUpdateType() {
+    const regex = /(.+)\((minor|major|patch)\)(.*)/g
+    const match = regex.exec(this.message);
+    if (match) {
+      this.info.updateType = match[2] as string;
+      this.message = match[1] as string + match[3] as string;
+    }
+  }
+
+  private extractPackages() {
+    const regex = /^(.+)(\((?<packages>`[^`]+`(?:, `[^`]+`)*)\))$/g
+    const match = regex.exec(this.message);
+    if (match) {
+      this.info.packages = match.groups!['packages']?.split(", ").map((pkg: string) => pkg.replace(/`/g, "").trim()) ?? [];
+      this.message = match[1] as string;
+    }
+  }
+
+  private extractVersions() {
+    const regex = /^(.+?)(?:from (?<fromVersion>v?\d+(\.\d+)*))? ?(?:to (?<toVersion>v?\d+(\.\d+)*))?\s*$/g
+    const match = regex.exec(this.message);
+    if (match) {
+      this.info.fromVersion = match.groups!['fromVersion'] || null;
+      this.info.toVersion = match.groups!['toVersion'] || null;
+      this.message = match[1] as string;
+    }
+  }
+
+  private extractDependency() {
+    const regex = /Update (buildkite plugin |dependency |module |)(\S+)( monorepo|)/g
+    const match = regex.exec(this.message);
+    if (match) {
+      this.info.dependency = match[2] as string;
+      this.message = '';
+    }
+  }
+}
 
 const extractUpdateInfo = (text: string): UpdateInfo[] => {
   const results: UpdateInfo[] = [];
-  const regex = new RegExp(pattern);
+  const regex = /-->([^\n]+Update[^\n]+)/g;
   let match;
+  const extractor = new InfoExtractor();
 
   while ((match = regex.exec(text)) !== null) {
-    const {
-      dependency,
-      fromVersion,
-      toVersion,
-      updateType,
-      pullRequest,
-      packages,
-    } = match.groups!;
-    console.log(match.groups);
-
-    if (!dependency) {
-      continue;
-    }
-
-    results.push({
-      dependency: dependency.trim(),
-      fromVersion: fromVersion ?? null,
-      toVersion: toVersion ?? null,
-      updateType: updateType ?? null,
-      pullRequest: pullRequest ?? null,
-      packages:
-        packages?.split(", ").map((pkg) => pkg.replace(/`/g, "").trim()) ?? [],
-    });
+    extractor.extract(match[1] as string);
+    results.push(extractor.info);
   }
 
   return results;
