@@ -17,7 +17,8 @@
   "description": "",
   "scripts": {
     "build": "npx tsc",
-    "dev": "npx tsc -w"
+    "dev": "npx tsc -w",
+    "test": "vitest"
   },
   "bin": {
     "renovate-deps-cli": "./dist/index.js"
@@ -34,6 +35,7 @@
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.5",
     "@types/node": "^22.10.10",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.4"
   }
 }
