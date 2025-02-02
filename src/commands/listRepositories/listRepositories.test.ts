@@ -1,108 +1,5 @@
 import { expect, test } from "vitest";
-
-interface UpdateInfo {
-  dependency: string;
-  fromVersion: string | null;
-  toVersion: string | null;
-  updateType: string | null;
-  pullRequest: string | null;
-  packages: string[];
-}
-
-class InfoExtractor {
-  public info: UpdateInfo;
-  private message: string;
-
-  constructor() {
-    this.info = {
-      dependency: "",
-      fromVersion: null,
-      toVersion: null,
-      updateType: null,
-      pullRequest: null,
-      packages: [],
-    }
-    this.message = "";
-  }
-
-  extract(message: string) {
-    this.info = {
-      dependency: "",
-      fromVersion: null,
-      toVersion: null,
-      updateType: null,
-      pullRequest: null,
-      packages: [],
-    }
-    this.message = message;
-
-    this.extractPullRequest();
-    this.extractUpdateType();
-    this.extractPackages();
-    this.extractVersions();
-    this.extractDependency();
-  }
-
-  private extractPullRequest() {
-    const regex = /\[(.+)]\(\.\.\/pull\/(\d+)\)(.*)/g
-    const match = regex.exec(this.message);
-    if (match) {
-      this.info.pullRequest = match[2] as string;
-      this.message = match[1] as string + match[3] as string;
-    }
-  }
-
-  private extractUpdateType() {
-    const regex = /(.+)\((minor|major|patch)\)(.*)/g
-    const match = regex.exec(this.message);
-    if (match) {
-      this.info.updateType = match[2] as string;
-      this.message = match[1] as string + match[3] as string;
-    }
-  }
-
-  private extractPackages() {
-    const regex = /^(.+)(\((?<packages>`[^`]+`(?:, `[^`]+`)*)\))$/g
-    const match = regex.exec(this.message);
-    if (match) {
-      this.info.packages = match.groups!['packages']?.split(", ").map((pkg: string) => pkg.replace(/`/g, "").trim()) ?? [];
-      this.message = match[1] as string;
-    }
-  }
-
-  private extractVersions() {
-    const regex = /^(.+?)(?:from (?<fromVersion>v?\d+(\.\d+)*))? ?(?:to (?<toVersion>v?\d+(\.\d+)*))?\s*$/g
-    const match = regex.exec(this.message);
-    if (match) {
-      this.info.fromVersion = match.groups!['fromVersion'] || null;
-      this.info.toVersion = match.groups!['toVersion'] || null;
-      this.message = match[1] as string;
-    }
-  }
-
-  private extractDependency() {
-    const regex = /Update (buildkite plugin |dependency |module |)(\S+)( monorepo|)/g
-    const match = regex.exec(this.message);
-    if (match) {
-      this.info.dependency = match[2] as string;
-      this.message = '';
-    }
-  }
-}
-
-const extractUpdateInfo = (text: string): UpdateInfo[] => {
-  const results: UpdateInfo[] = [];
-  const regex = /-->([^\n]+Update[^\n]+)/g;
-  let match;
-  const extractor = new InfoExtractor();
-
-  while ((match = regex.exec(text)) !== null) {
-    extractor.extract(match[1] as string);
-    results.push(extractor.info);
-  }
-
-  return results;
-};
+import { extractUpdateInfo } from "./listRepositories.js";
 
 test("Update Node.js to v22", () => {
   const body = `- [ ] <!-- approve-branch=renovate/docker-dev-artifactory.workday.com-peakon-node-22.x -->chore(deps): [PEAKON-2396] Update Node.js to v22`;
@@ -165,12 +62,16 @@ test("Update graphqlcodegenerator monorepo (major)", () => {
   const result = extractUpdateInfo(body);
 
   expect(result[0]).toMatchObject({
-    dependency: "@graphql-codegen/cli",
+    dependency: "graphqlcodegenerator",
     fromVersion: null,
     toVersion: null,
     updateType: "major",
     pullRequest: null,
-    packages: ["@graphql-codegen/client-preset", "@graphql-codegen/typescript"],
+    packages: [
+      "@graphql-codegen/cli",
+      "@graphql-codegen/client-preset",
+      "@graphql-codegen/typescript",
+    ],
   });
 });
 
@@ -184,7 +85,7 @@ test("Update react monorepo (major)", () => {
     toVersion: null,
     updateType: "major",
     pullRequest: null,
-    packages: ["@types/react", "@types/react-dom", "react-dom"],
+    packages: ["@types/react", "@types/react-dom", "react", "react-dom"],
   });
 });
 
@@ -430,6 +331,42 @@ test("Update buildkite plugin docker-compose to v5", () => {
     toVersion: "v5",
     updateType: null,
     pullRequest: null,
+    packages: [],
+  });
+});
+
+test("Body with multiple updates", () => {
+  const body = `- [ ] <!-- rebase-branch=renovate/docker-dockerfile-1.x -->[chore(deps): [PEAKON-2396] Update buildkite plugin docker-compose to v5](../pull/81)
+  - [ ] <!-- rebase-branch=renovate/docker-dockerfile-1.x -->[chore(deps): [PEAKON-2396] Update actions/checkout action from v3 to v4](../pull/81)
+  hello
+  - [ ] <!-- rebase-branch=renovate/docker-dockerfile-1.x -->[chore(deps): [PEAKON-2396] Update buildkite plugin peakon/monorepo-diff to v2](../pull/84)
+  something else
+  `;
+
+  const result = extractUpdateInfo(body);
+
+  expect(result[0]).toMatchObject({
+    dependency: "docker-compose",
+    fromVersion: null,
+    toVersion: "v5",
+    updateType: null,
+    pullRequest: "81",
+    packages: [],
+  });
+  expect(result[1]).toMatchObject({
+    dependency: "actions/checkout",
+    fromVersion: "v3",
+    toVersion: "v4",
+    updateType: null,
+    pullRequest: "81",
+    packages: [],
+  });
+  expect(result[2]).toMatchObject({
+    dependency: "peakon/monorepo-diff",
+    fromVersion: null,
+    toVersion: "v2",
+    updateType: null,
+    pullRequest: "84",
     packages: [],
   });
 });

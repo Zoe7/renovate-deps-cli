@@ -5,8 +5,114 @@ import { logger } from "../../utils/logger.js";
 import chalk from "chalk";
 import ora from "ora";
 
-const regex =
-  /Update (?:dependency )?(?<dependency>[^\s]+ )(?:monorepo )?(?:from (?<fromVersion>v?\d+\.\d+\.\d+) to (?<toVersion>v?\d+\.\d+\.\d+))?(\]| |)(\((?<updateType>major|minor|patch)\))?(\]| |)(?:\(\.\.\/pull\/(?<pullRequest>\d+)\) ?)(\((?<packages>`[^`]+`(?:, `[^`]+`)*)\))?/g;
+interface UpdateInfo {
+  dependency: string;
+  fromVersion: string | null;
+  toVersion: string | null;
+  updateType: string | null;
+  pullRequest: string | null;
+  packages: string[];
+}
+
+class InfoExtractor {
+  public info: UpdateInfo;
+  private message: string;
+
+  constructor() {
+    this.info = {
+      dependency: "",
+      fromVersion: null,
+      toVersion: null,
+      updateType: null,
+      pullRequest: null,
+      packages: [],
+    };
+    this.message = "";
+  }
+
+  extract(message: string) {
+    this.info = {
+      dependency: "",
+      fromVersion: null,
+      toVersion: null,
+      updateType: null,
+      pullRequest: null,
+      packages: [],
+    };
+    this.message = message;
+
+    this.extractPullRequest();
+    this.extractUpdateType();
+    this.extractPackages();
+    this.extractVersions();
+    this.extractDependency();
+  }
+
+  private extractPullRequest() {
+    const regex = /\[(.+)]\(\.\.\/pull\/(\d+)\)(.*)/g;
+    const match = regex.exec(this.message);
+    if (match) {
+      this.info.pullRequest = match[2] as string;
+      this.message = ((match[1] as string) + match[3]) as string;
+    }
+  }
+
+  private extractUpdateType() {
+    const regex = /(.+)\((minor|major|patch)\)(.*)/g;
+    const match = regex.exec(this.message);
+    if (match) {
+      this.info.updateType = match[2] as string;
+      this.message = ((match[1] as string) + match[3]) as string;
+    }
+  }
+
+  private extractPackages() {
+    const regex = /^(.+)(\((?<packages>`[^`]+`(?:, `[^`]+`)*)\))$/g;
+    const match = regex.exec(this.message);
+    if (match) {
+      this.info.packages =
+        match
+          .groups!["packages"]?.split(", ")
+          .map((pkg: string) => pkg.replace(/`/g, "").trim()) ?? [];
+      this.message = match[1] as string;
+    }
+  }
+
+  private extractVersions() {
+    const regex =
+      /^(.+?)(?:from (?<fromVersion>v?\d+(\.\d+)*))? ?(?:to (?<toVersion>v?\d+(\.\d+)*))?\s*$/g;
+    const match = regex.exec(this.message);
+    if (match) {
+      this.info.fromVersion = match.groups!["fromVersion"] || null;
+      this.info.toVersion = match.groups!["toVersion"] || null;
+      this.message = match[1] as string;
+    }
+  }
+
+  private extractDependency() {
+    const regex =
+      /Update (buildkite plugin |dependency |module |)(\S+)( monorepo|)/g;
+    const match = regex.exec(this.message);
+    if (match) {
+      this.info.dependency = match[2] as string;
+      this.message = "";
+    }
+  }
+}
+
+export const extractUpdateInfo = (text: string): UpdateInfo[] => {
+  const results: UpdateInfo[] = [];
+  const regex = /-->([^\n]+Update[^\n]+)/g;
+  let match;
+  const extractor = new InfoExtractor();
+
+  while ((match = regex.exec(text)) !== null) {
+    extractor.extract(match[1] as string);
+    results.push(extractor.info);
+  }
+
+  return results;
+};
 
 type Repository = Awaited<
   ReturnType<Octokit["repos"]["listForAuthenticatedUser"]>
@@ -109,40 +215,20 @@ export async function listRepositories(args: unknown) {
         chalk.cyan(`${repo.full_name} - ${chalk.underline(issue.html_url)}`)
       );
 
-      const regexMatches = issue.body.matchAll(regex);
-      for (const regexMatch of regexMatches) {
-        if (!regexMatch.groups || !regexMatch.groups["dependency"]) {
-          logger.debug(
-            "  Did not find any dependencies to update in the issue body."
-          );
-          continue;
-        }
-        const {
-          dependency,
-          fromVersion,
-          toVersion,
-          updateType,
-          pullRequest,
-          packages,
-        } = regexMatch.groups;
-
+      const updates = extractUpdateInfo(issue.body);
+      for (const update of updates) {
         const logInfo = [
-          `  - Update ${dependency.trim()}`,
-          fromVersion && toVersion
-            ? `from ${fromVersion} to ${toVersion}`
-            : updateType
-            ? `(${updateType})`
+          `  - Update ${update.dependency.trim()}`,
+          update.fromVersion ? `from ${update.fromVersion}` : null,
+          update.toVersion ? `to ${update.toVersion}` : null,
+          update.updateType ? `(${update.updateType})` : null,
+          update.packages.length > 0
+            ? chalk.gray(`[${update.packages.join(", ")}]`)
             : null,
-          packages
-            ? chalk.gray(
-                `[${packages
-                  .split(", ")
-                  .map((pkg) => pkg.replace(/`/g, "").trim())
-                  .join(", ")}]`
-              )
-            : null,
-          pullRequest
-            ? `- ${chalk.underline(`${repo.html_url}/pull/${pullRequest}`)}`
+          update.pullRequest
+            ? `- ${chalk.underline(
+                `${repo.html_url}/pull/${update.pullRequest}`
+              )}`
             : null,
         ]
           .filter(Boolean)
