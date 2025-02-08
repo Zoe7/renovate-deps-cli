@@ -335,6 +335,20 @@ test("Update buildkite plugin docker-compose to v5", () => {
   });
 });
 
+test("Update dependency gnu_node_ami to ami-002a25a3d5a3d5a3d", () => {
+  const body = `- [ ] <!-- rebase-branch=renovate/docker-dockerfile-1.x -->chore(deps): [PEAKON-2396] Update dependency gnu_node_ami to ami-002a25a3d5a3d5a3d`;
+  const result = extractUpdateInfo(body);
+
+  expect(result[0]).toMatchObject({
+    dependency: "gnu_node_ami",
+    fromVersion: null,
+    toVersion: "ami-002a25a3d5a3d5a3d",
+    updateType: null,
+    pullRequest: null,
+    packages: [],
+  });
+});
+
 test("Body with multiple updates", () => {
   const body = `- [ ] <!-- rebase-branch=renovate/docker-dockerfile-1.x -->[chore(deps): [PEAKON-2396] Update buildkite plugin docker-compose to v5](../pull/81)
   - [ ] <!-- rebase-branch=renovate/docker-dockerfile-1.x -->[chore(deps): [PEAKON-2396] Update actions/checkout action from v3 to v4](../pull/81)

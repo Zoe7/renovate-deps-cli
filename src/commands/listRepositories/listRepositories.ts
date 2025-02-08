@@ -80,7 +80,7 @@ class InfoExtractor {
 
   private extractVersions() {
     const regex =
-      /^(.+?)(?:from (?<fromVersion>v?\d+(\.\d+)*))? ?(?:to (?<toVersion>v?\d+(\.\d+)*))?\s*$/g;
+      /^(.+?)(?:from (?<fromVersion>\S+))? ?(?:to (?<toVersion>\S+))?\s*$/g;
     const match = regex.exec(this.message);
     if (match) {
       this.info.fromVersion = match.groups!["fromVersion"] || null;
