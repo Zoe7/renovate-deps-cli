@@ -2,7 +2,7 @@
 import { Command } from "commander";
 import { userConfig } from "./utils/config.js";
 import { init } from "./commands/init/init.js";
-import { listRepositories } from "./commands/listRepositories/listRepositories.js";
+import { listDependencies } from "./commands/listDependencies/listDependencies.js";
 import { cleanup } from "./commands/cleanup/cleanup.js";
 import { withExitPromptErrorHandling } from "./utils/withExitPromptErrorHandling.js";
 import { withVerboseLogging } from "./utils/withVerboseLogging.js";
@@ -23,7 +23,7 @@ program
   );
 
 program
-  .command("list-repos")
+  .command("list-deps")
   .option(
     "-o, --org <organization>",
     "The Github organization to filter the repositories by"
@@ -33,9 +33,9 @@ program
     "The Github username of the renovate bot to filter the repositories by"
   )
   .option("--verbose", "Print additional debug information to the console")
-  .action(withExitPromptErrorHandling(withVerboseLogging(listRepositories)))
+  .action(withExitPromptErrorHandling(withVerboseLogging(listDependencies)))
   .description(
-    "List all the repositories accessible by the CLI based on your configuration"
+    "List all the pending dependencies updates in all the repositories accessible by the CLI based on your configuration"
   );
 
 program

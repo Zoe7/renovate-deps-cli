@@ -160,7 +160,7 @@ type Repository = Awaited<
   ReturnType<Octokit["repos"]["listForAuthenticatedUser"]>
 >["data"][number];
 
-export async function listRepositories(args: unknown) {
+export async function listDependencies(args: unknown) {
   const fetchingReposSpinner = ora(
     "Fetching list of repositories to analyze"
   ).start();
