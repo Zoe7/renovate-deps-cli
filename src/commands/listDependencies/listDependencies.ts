@@ -1,9 +1,32 @@
-import { Octokit } from "@octokit/rest";
-import { userConfig } from "../../utils/config.js";
 import { z } from "zod";
 import { logger } from "../../utils/logger.js";
 import chalk from "chalk";
 import ora from "ora";
+import { OctokitService } from "../../services/octokit.js";
+import { userConfig } from "../../utils/config.js";
+
+export function getOptions(args: unknown) {
+  const options = z
+    .object({
+      org: z.string().optional(),
+      renovateGithubAuthor: z.string().optional(),
+      repos: z.array(z.string()).optional(),
+      dependencies: z.array(z.string()).optional(),
+    })
+    .parse(args);
+
+  const org = options.org ?? userConfig.defaultOrg.get();
+  const renovateGithubAuthor =
+    options.renovateGithubAuthor ??
+    userConfig.defaultRenovateGithubAuthor.get();
+
+  return {
+    org,
+    renovateGithubAuthor,
+    reposToFilterBy: options.repos,
+    dependenciesToFilterBy: options.dependencies,
+  };
+}
 
 type UpdateInfo = {
   dependency: string | null;
@@ -156,45 +179,37 @@ export const extractUpdateInfo = (text: string) => {
   return pendingUpdates;
 };
 
-type Repository = Awaited<
-  ReturnType<Octokit["repos"]["listForAuthenticatedUser"]>
->["data"][number];
-
 export async function listDependencies(args: unknown) {
+  const { org, renovateGithubAuthor, reposToFilterBy, dependenciesToFilterBy } =
+    getOptions(args);
+
+  const octokitService = new OctokitService();
+
   const fetchingReposSpinner = ora(
     "Fetching list of repositories to analyze"
   ).start();
 
-  const options = z
-    .object({
-      org: z.string().optional(),
-      renovateGithubAuthor: z.string().optional(),
-    })
-    .parse(args);
-
-  const org = options.org ?? userConfig.defaultOrg.get();
-  const renovateGithubAuthor =
-    options.renovateGithubAuthor ??
-    userConfig.defaultRenovateGithubAuthor.get();
-
-  const octokit = new Octokit({
-    auth: userConfig.githubToken.get(),
+  const repos = await octokitService.fetchRepos({
+    org,
+    reposToFilterBy,
   });
 
-  const repos = (
-    await octokit.paginate(octokit.repos.listForAuthenticatedUser)
-  ).filter((repo) => {
-    const conditions: ((repo: Repository) => boolean)[] = [
-      // default conditions we want to be true for every repo
-      (repo) => repo.archived === false,
-    ];
+  fetchingReposSpinner.stop();
 
-    if (org) {
-      conditions.push((repo) => repo.owner.login === org);
-    }
-
-    return conditions.every((condition) => condition(repo));
-  });
+  if (repos.length === 0) {
+    logger.info("");
+    logger.info("");
+    logger.info(
+      "Did not find any repositories accessible by the CLI using the given configuration options:"
+    );
+    logger.info(`- Organization: ${org ?? "N/A"}`);
+    logger.info(
+      `- Repositories to filter by: ${
+        reposToFilterBy ? reposToFilterBy.join(", ") : "N/A"
+      }`
+    );
+    return;
+  }
 
   logger.debug("");
   logger.debug(
@@ -203,87 +218,96 @@ export async function listDependencies(args: unknown) {
     } accessible by the CLI using the given configuration options.`
   );
   logger.debug("");
-  fetchingReposSpinner.stop();
 
   for (const repo of repos) {
     const fetchingDependencyDashboardSpinner = ora(
       `Fetching dependency dashboard for ${repo.full_name}`
     ).start();
-    const issues = (
-      await octokit.paginate(octokit.issues.listForRepo, {
-        repo: repo.name,
-        owner: repo.owner.login,
-        creator: renovateGithubAuthor,
-      })
-    ).filter(
-      (issue) =>
-        issue.pull_request === undefined &&
-        issue.title.includes("Dependency Dashboard")
-    );
+
+    const dependencyDashboard = await octokitService.fetchDependencyDashboard({
+      repoName: repo.name,
+      repoOwner: repo.owner.login,
+      renovateGithubAuthor,
+    });
 
     fetchingDependencyDashboardSpinner.stop();
 
-    // no issues
-    if (issues.length === 0) {
+    if (!dependencyDashboard) {
       logger.debug("");
       logger.debug(`${repo.full_name}`);
       logger.debug("  Not using Renovate");
       continue;
     }
 
-    // only one issue per repository
-    if (issues.length > 1) {
+    if (!dependencyDashboard.body) {
       logger.debug("");
       logger.debug(`${repo.full_name}`);
       logger.debug(
-        `  ${issues.length} dependency dashboard issues found. There should only be one per repository. Skipping this repository.`
+        `  issue: ${dependencyDashboard.title} - ${dependencyDashboard.user?.login}`
+      );
+      logger.debug(
+        `  dependency dashboard body is unavailable. Can't retrieve list of updates. Skipping this repository.`
       );
       continue;
     }
 
-    for (const issue of issues) {
-      if (!issue.body) {
-        logger.debug("");
-        logger.debug(`${repo.full_name}`);
-        logger.debug(`  issue: ${issue.title} - ${issue.user?.login}`);
-        logger.debug(
-          `  dependency dashboard body is unavailable. Can't retrieve list of updates. Skipping this repository.`
-        );
-        continue;
-      }
+    const updates = extractUpdateInfo(dependencyDashboard.body);
+    const filteredUpdates = dependenciesToFilterBy
+      ? updates.filter((update) => {
+          if (
+            update.dependency &&
+            dependenciesToFilterBy.includes(update.dependency)
+          ) {
+            return true;
+          }
 
-      logger.info("");
-      logger.info(
-        chalk.cyan(`${repo.full_name} - ${chalk.underline(issue.html_url)}`)
+          if (
+            update.packages &&
+            update.packages.some((p) => dependenciesToFilterBy.includes(p))
+          ) {
+            return true;
+          }
+
+          return false;
+        })
+      : updates;
+
+    if (filteredUpdates.length === 0) {
+      logger.debug("");
+      logger.debug(
+        chalk.cyan(
+          `${repo.full_name} - ${chalk.underline(dependencyDashboard.html_url)}`
+        )
       );
+      logger.debug("  No updates found");
+      continue;
+    }
 
-      const updates = extractUpdateInfo(issue.body);
+    logger.info("");
+    logger.info(
+      chalk.cyan(
+        `${repo.full_name} - ${chalk.underline(dependencyDashboard.html_url)}`
+      )
+    );
+    for (const update of filteredUpdates) {
+      const logInfo = [
+        `  - Update ${update.dependency}`,
+        update.fromVersion ? `from ${update.fromVersion}` : null,
+        update.toVersion ? `to ${update.toVersion}` : null,
+        update.updateType ? `(${update.updateType})` : null,
+        update.packages.length > 0
+          ? chalk.gray(`[${update.packages.join(", ")}]`)
+          : null,
+        update.pullRequest
+          ? `- ${chalk.underline(
+              `${repo.html_url}/pull/${update.pullRequest}`
+            )}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ");
 
-      if (updates.length === 0) {
-        logger.info("  No updates found");
-        continue;
-      }
-
-      for (const update of updates) {
-        const logInfo = [
-          `  - Update ${update.dependency}`,
-          update.fromVersion ? `from ${update.fromVersion}` : null,
-          update.toVersion ? `to ${update.toVersion}` : null,
-          update.updateType ? `(${update.updateType})` : null,
-          update.packages.length > 0
-            ? chalk.gray(`[${update.packages.join(", ")}]`)
-            : null,
-          update.pullRequest
-            ? `- ${chalk.underline(
-                `${repo.html_url}/pull/${update.pullRequest}`
-              )}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-        logger.info(logInfo);
-      }
+      logger.info(logInfo);
     }
   }
 }

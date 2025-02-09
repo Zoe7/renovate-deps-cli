@@ -29,8 +29,16 @@ program
     "The Github organization to filter the repositories by"
   )
   .option(
-    "-r, --renovate-github-author <renovateGithubAuthor>",
+    "--rga, --renovate-github-author <renovateGithubAuthor>",
     "The Github username of the renovate bot to filter the repositories by"
+  )
+  .option(
+    "-r, --repos <repositories...>",
+    "A list of repositories to display the pending dependencies updates for"
+  )
+  .option(
+    "-d, --dependencies <dependencies...>",
+    "The dependencies for which to find pending updates"
   )
   .option("--verbose", "Print additional debug information to the console")
   .action(withExitPromptErrorHandling(withVerboseLogging(listDependencies)))
