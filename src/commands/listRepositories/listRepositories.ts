@@ -5,113 +5,155 @@ import { logger } from "../../utils/logger.js";
 import chalk from "chalk";
 import ora from "ora";
 
-interface UpdateInfo {
-  dependency: string;
+type UpdateInfo = {
+  dependency: string | null;
   fromVersion: string | null;
   toVersion: string | null;
   updateType: string | null;
   pullRequest: string | null;
   packages: string[];
-}
+};
 
-class InfoExtractor {
-  public info: UpdateInfo;
-  private message: string;
+const extractPullRequest = (text: string) => {
+  const regex =
+    /\[(?<prefix>.+)]\(\.\.\/pull\/(?<pullRequest>\d+)\)(?<postfix>.*)/g;
+  const match = regex.exec(text);
 
-  constructor() {
-    this.info = {
-      dependency: "",
-      fromVersion: null,
-      toVersion: null,
-      updateType: null,
-      pullRequest: null,
-      packages: [],
+  if (match) {
+    const groups = z
+      .object({
+        pullRequest: z.string().optional(),
+        prefix: z.string(),
+        postfix: z.string(),
+      })
+      .parse(match.groups);
+
+    return {
+      pullRequest: groups.pullRequest ?? null,
+      remainingText: `${groups.prefix}${groups.postfix}`,
     };
-    this.message = "";
   }
 
-  extract(message: string) {
-    this.info = {
-      dependency: "",
-      fromVersion: null,
-      toVersion: null,
-      updateType: null,
-      pullRequest: null,
-      packages: [],
+  return { pullRequest: null, remainingText: text };
+};
+
+const extractUpdateType = (text: string) => {
+  const regex =
+    /(?<prefix>.+)\((?<updateType>minor|major|patch)\)(?<postfix>.*)/g;
+  const match = regex.exec(text);
+
+  if (match) {
+    const groups = z
+      .object({
+        updateType: z.enum(["minor", "major", "patch"]),
+        prefix: z.string(),
+        postfix: z.string(),
+      })
+      .parse(match.groups);
+
+    return {
+      updateType: groups.updateType,
+      remainingText: `${groups.prefix}${groups.postfix}`,
     };
-    this.message = message;
-
-    this.extractPullRequest();
-    this.extractUpdateType();
-    this.extractPackages();
-    this.extractVersions();
-    this.extractDependency();
   }
 
-  private extractPullRequest() {
-    const regex = /\[(.+)]\(\.\.\/pull\/(\d+)\)(.*)/g;
-    const match = regex.exec(this.message);
-    if (match) {
-      this.info.pullRequest = match[2] as string;
-      this.message = ((match[1] as string) + match[3]) as string;
+  return { updateType: null, remainingText: text };
+};
+
+const extractPackages = (text: string) => {
+  const regex = /^(?<prefix>.+)(\((?<packages>`[^`]+`(?:, `[^`]+`)*)\))$/g;
+  const match = regex.exec(text);
+
+  if (match) {
+    const groups = z
+      .object({
+        packages: z.string(),
+        prefix: z.string(),
+      })
+      .parse(match.groups);
+
+    return {
+      packages:
+        groups.packages
+          .split(", ")
+          .map((pkg) => pkg.replace(/`/g, "").trim()) ?? [],
+      remainingText: groups.prefix,
+    };
+  }
+
+  return { packages: [], remainingText: text };
+};
+
+const extractDependency = (text: string) => {
+  const regex =
+    /Update (buildkite plugin |dependency |module |)(?<name>\S+)(monorepo|)/g;
+  const match = regex.exec(text);
+
+  if (match) {
+    const groups = z
+      .object({
+        name: z.string(),
+      })
+      .parse(match.groups);
+    return {
+      dependency: groups.name.trim(),
+      remainingText: "",
+    };
+  }
+
+  return { dependency: null, remainingText: text };
+};
+
+const extractVersions = (text: string) => {
+  const regex =
+    /^(?<prefix>.+?)(?:from (?<fromVersion>\S+))? ?(?:to (?<toVersion>\S+))?\s*$/g;
+  const match = regex.exec(text);
+
+  if (match) {
+    const groups = z
+      .object({
+        fromVersion: z.string().optional(),
+        toVersion: z.string().optional(),
+        prefix: z.string(),
+      })
+      .parse(match.groups);
+
+    return {
+      fromVersion: groups.fromVersion ?? null,
+      toVersion: groups.toVersion ?? null,
+      remainingText: groups.prefix,
+    };
+  }
+
+  return { fromVersion: null, toVersion: null, remainingText: text };
+};
+
+export const extractUpdateInfo = (text: string) => {
+  const pendingUpdates: UpdateInfo[] = [];
+
+  for (const match of text.matchAll(/-->(?<_line>[^\n]+Update[^\n]+)/g)) {
+    const line = match.groups?.["_line"];
+    if (!line) {
+      continue;
     }
+
+    const pullRequestInfo = extractPullRequest(line);
+    const updateTypeInfo = extractUpdateType(pullRequestInfo.remainingText);
+    const packagesInfo = extractPackages(updateTypeInfo.remainingText);
+    const versionsInfo = extractVersions(packagesInfo.remainingText);
+    const dependencyInfo = extractDependency(versionsInfo.remainingText);
+
+    pendingUpdates.push({
+      dependency: dependencyInfo.dependency,
+      fromVersion: versionsInfo.fromVersion,
+      toVersion: versionsInfo.toVersion,
+      updateType: updateTypeInfo.updateType,
+      pullRequest: pullRequestInfo.pullRequest,
+      packages: packagesInfo.packages,
+    });
   }
 
-  private extractUpdateType() {
-    const regex = /(.+)\((minor|major|patch)\)(.*)/g;
-    const match = regex.exec(this.message);
-    if (match) {
-      this.info.updateType = match[2] as string;
-      this.message = ((match[1] as string) + match[3]) as string;
-    }
-  }
-
-  private extractPackages() {
-    const regex = /^(.+)(\((?<packages>`[^`]+`(?:, `[^`]+`)*)\))$/g;
-    const match = regex.exec(this.message);
-    if (match) {
-      this.info.packages =
-        match
-          .groups!["packages"]?.split(", ")
-          .map((pkg: string) => pkg.replace(/`/g, "").trim()) ?? [];
-      this.message = match[1] as string;
-    }
-  }
-
-  private extractVersions() {
-    const regex =
-      /^(.+?)(?:from (?<fromVersion>\S+))? ?(?:to (?<toVersion>\S+))?\s*$/g;
-    const match = regex.exec(this.message);
-    if (match) {
-      this.info.fromVersion = match.groups!["fromVersion"] || null;
-      this.info.toVersion = match.groups!["toVersion"] || null;
-      this.message = match[1] as string;
-    }
-  }
-
-  private extractDependency() {
-    const regex =
-      /Update (buildkite plugin |dependency |module |)(\S+)( monorepo|)/g;
-    const match = regex.exec(this.message);
-    if (match) {
-      this.info.dependency = match[2] as string;
-      this.message = "";
-    }
-  }
-}
-
-export const extractUpdateInfo = (text: string): UpdateInfo[] => {
-  const results: UpdateInfo[] = [];
-  const regex = /-->([^\n]+Update[^\n]+)/g;
-  let match;
-  const extractor = new InfoExtractor();
-
-  while ((match = regex.exec(text)) !== null) {
-    extractor.extract(match[1] as string);
-    results.push(extractor.info);
-  }
-
-  return results;
+  return pendingUpdates;
 };
 
 type Repository = Awaited<
@@ -216,9 +258,15 @@ export async function listRepositories(args: unknown) {
       );
 
       const updates = extractUpdateInfo(issue.body);
+
+      if (updates.length === 0) {
+        logger.info("  No updates found");
+        continue;
+      }
+
       for (const update of updates) {
         const logInfo = [
-          `  - Update ${update.dependency.trim()}`,
+          `  - Update ${update.dependency}`,
           update.fromVersion ? `from ${update.fromVersion}` : null,
           update.toVersion ? `to ${update.toVersion}` : null,
           update.updateType ? `(${update.updateType})` : null,
