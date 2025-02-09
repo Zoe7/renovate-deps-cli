@@ -2,7 +2,6 @@ import { confirm, input, password } from "@inquirer/prompts";
 import { userConfig } from "../../utils/config.js";
 import chalk from "chalk";
 import { z } from "zod";
-import { symbols } from "../../utils/symbols.js";
 import { logger } from "../../utils/logger.js";
 
 export async function init() {
