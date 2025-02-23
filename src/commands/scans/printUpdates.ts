@@ -17,18 +17,25 @@ export function printUpdates({
     url: string;
   };
 }) {
-  const updates = dependenciesToFilterBy
+  const lowerCaseDependenciesToFilterBy = dependenciesToFilterBy?.map((d) =>
+    d.toLowerCase()
+  );
+  const updates = lowerCaseDependenciesToFilterBy
     ? allUpdates.filter((update) => {
         if (
           update.dependency &&
-          dependenciesToFilterBy.includes(update.dependency)
+          lowerCaseDependenciesToFilterBy.includes(
+            update.dependency.toLocaleLowerCase()
+          )
         ) {
           return true;
         }
 
         if (
           update.packages &&
-          update.packages.some((p) => dependenciesToFilterBy.includes(p))
+          update.packages.some((p) =>
+            lowerCaseDependenciesToFilterBy.includes(p.toLocaleLowerCase())
+          )
         ) {
           return true;
         }
