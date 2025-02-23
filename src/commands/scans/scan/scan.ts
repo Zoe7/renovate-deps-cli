@@ -111,7 +111,7 @@ export async function scan(args: unknown) {
 
     if (!dependencyDashboard) {
       logger.debug(
-        `Repository ${repo.owner}/${repo.name} is not using Renovate`
+        `Repository ${repo.owner.login}/${repo.name} is not using Renovate`
       );
       logger.debug("");
       continue;

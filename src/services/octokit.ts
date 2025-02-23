@@ -1,16 +1,19 @@
 import { Octokit } from "@octokit/rest";
 import { userConfig } from "../utils/config.js";
 import { logger } from "../utils/logger.js";
+import { throttling } from "@octokit/plugin-throttling";
 
 type Repository = Awaited<
   ReturnType<Octokit["repos"]["listForAuthenticatedUser"]>
 >["data"][number];
 
+const ThrottledOctokit = Octokit.plugin(throttling);
+
 export class OctokitService {
   private octokit: Octokit;
 
   constructor() {
-    this.octokit = new Octokit({
+    this.octokit = new ThrottledOctokit({
       // todo: handle error if this isn't set yet
       auth: userConfig.githubToken.get(),
       log: {
@@ -18,6 +21,24 @@ export class OctokitService {
         info: (message: string) => logger.debug(`    ${message}`),
         warn: (message: string) => logger.debug(`    ${message}`),
         error: (message: string) => logger.debug(`    ${message}`),
+      },
+      throttle: {
+        onRateLimit: (retryAfter, options, _, retryCount) => {
+          logger.debug(
+            `Request quota exhausted for request ${options.method} ${options.url}`
+          );
+
+          if (retryCount < 1) {
+            logger.debug(`Retrying after ${retryAfter} seconds!`);
+            return true;
+          }
+          return false;
+        },
+        onSecondaryRateLimit: (_, options) => {
+          logger.debug(
+            `SecondaryRateLimit detected for request ${options.method} ${options.url}`
+          );
+        },
       },
     });
   }
