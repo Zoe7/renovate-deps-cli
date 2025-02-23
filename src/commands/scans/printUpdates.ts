@@ -51,7 +51,13 @@ export function printUpdates({
   );
 
   if (updates.length === 0) {
-    logger.info("  - No pending updates");
+    logger.info(
+      chalk.dim(
+        dependenciesToFilterBy
+          ? "  - No pending updates matching the dependency filter"
+          : "  - No pending updates"
+      )
+    );
   }
 
   for (const update of updates) {
