@@ -100,25 +100,36 @@ export class OctokitService {
     repoOwner: string;
   }) {
     try {
-      const response = await this.octokit.search.issuesAndPullRequests({
-        q: `repo:${repoOwner}/${repoName} type:issue state:open in:title "Dependency Dashboard"`,
-      });
+      let page = 1;
+      const perPage = 50;
+      let dashboardIssue = null;
 
-      const issues = response.data.items;
-      if (issues.length > 1) {
-        logger.debug("");
-        logger.debug(
-          `Multiple dependency dashboard issues found for repo ${repoName}`
+      while (!dashboardIssue) {
+        const response = await this.octokit.issues.listForRepo({
+          owner: repoOwner,
+          repo: repoName,
+          state: "open",
+          per_page: perPage,
+          sort: "created",
+          direction: "asc",
+          page,
+        });
+
+        dashboardIssue = response.data.find(
+          (issue) => issue.title === "Dependency Dashboard"
         );
-        for (const issue of issues) {
-          logger.debug(`Issue title: ${issue.title}`);
-        }
-        logger.debug("");
 
-        return issues.find((issue) => issue.user?.login.includes("renovate"));
+        if (dashboardIssue) {
+          return dashboardIssue;
+        }
+
+        // Stop if there are no more issues
+        if (response.data.length < perPage) break;
+        page++;
       }
 
-      return issues[0];
+      logger.debug("No open 'Dependency Dashboard' issue found.");
+      return undefined;
     } catch (error) {
       return undefined;
     }
