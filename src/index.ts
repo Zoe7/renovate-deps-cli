@@ -8,7 +8,8 @@ import { logger } from "./utils/logger.js";
 import { createRepoGroups } from "./commands/repoGroups/createRepoGroups.js";
 import { deleteRepoGroup } from "./commands/repoGroups/deleteRepoGroup.js";
 import { listRepoGroups } from "./commands/repoGroups/listRepoGroups.js";
-import { scan } from "./commands/scan/scan.js";
+import { scanGroup } from "./commands/scans/scanGroup/scanGroup.js";
+import { scan } from "./commands/scans/scan/scan.js";
 
 const program = new Command();
 
@@ -54,8 +55,24 @@ program
       .description("List all repository groups")
       .action(listRepoGroups)
   )
+  .addCommand(
+    new Command("scan")
+      .description(
+        "List all the pending dependencies updates for a specific repository group"
+      )
+      .argument("<groupName>", "Group name")
+      .option(
+        "-d, --dependencies <dependencies...>",
+        "The dependencies for which to find pending updates\n"
+      )
+      .option(
+        "--verbose",
+        "Print additional debug information to the console\n"
+      )
+      .action(scanGroup)
+  )
   .description(
-    "Manage repository groups for dependency analysis.\nThese predefined lists can be used with `renovate-deps scan-group` to efficiently check for updates across multiple repositories"
+    "Manage repository groups for dependency analysis.\nThese predefined groups can help narrow down the list of repositories being scanned and speed up the analysis\n"
   );
 
 program
@@ -71,10 +88,6 @@ program
     "The Github owner to filter the repositories by\nThis can help narrow down the list of repositories being scanned and speed up the analysis when no repositories are specified\nThis option is mutually exclusive with --repos\n"
   )
   .option(
-    "--rga, --renovate-github-author <renovateGithubAuthor>",
-    "The Renovate GitHub author responsible for creating dependency dashboard issues."
-  )
-  .option(
     "-d, --dependencies <dependencies...>",
     "The dependencies for which to find pending updates\n"
   )
@@ -83,19 +96,6 @@ program
   .description(
     'List all the pending dependencies updates\n\nThis command is much faster when provided with a list of specific repositories to scan.\nIf no repositories are specified, the CLI will scan all the repositories which might be relevant to the user using Octokit "listRepositoriesForAuthenticatedUser" API call. See https://octokit.github.io/rest.js/v21/#repos-list-for-authenticated-user for more information on which repositories are included in this list.\n'
   );
-
-program
-  .command("scan-group")
-  .requiredOption(
-    "-g, --repo-group <repositoryGroup>",
-    "The name of repository groups to display the pending dependencies updates for. Use `manage-repo-groups` to create and manage these predefined groups."
-  )
-  .option("--verbose", "Print additional debug information to the console")
-  .option(
-    "-d, --dependencies <dependencies...>",
-    "The dependencies for which to find pending updates"
-  )
-  .action(() => console.log("Not implemented yet"));
 
 program
   .command("cleanup")
@@ -109,10 +109,6 @@ program
   .command("checkConfig")
   .action(() => {
     logger.info(`githubToken: ${userConfig.githubToken.get()}`);
-    logger.info(
-      `defaultRenovateGithubAuthor: ${userConfig.defaultRenovateGithubAuthor.get()}`
-    );
-    logger.info(`defaultOwner: ${userConfig.defaultOwner.get()}`);
     logger.info(`repoGroups: ${userConfig.repoGroup.getAll()}`);
   })
   .description("Run the CLI");

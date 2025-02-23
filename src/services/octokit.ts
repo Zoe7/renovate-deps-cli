@@ -25,7 +25,7 @@ export class OctokitService {
   async fetchReposForAuthenticatedUser({
     owner,
   }: {
-    owner: string | undefined;
+    owner?: string | undefined;
   }) {
     try {
       const repos = (
@@ -74,39 +74,33 @@ export class OctokitService {
   async fetchDependencyDashboard({
     repoName,
     repoOwner,
-    renovateGithubAuthor,
   }: {
     repoName: string;
     repoOwner: string;
-    renovateGithubAuthor: string;
   }) {
     try {
-      const issues = (
-        await this.octokit.paginate(this.octokit.issues.listForRepo, {
-          repo: repoName,
-          owner: repoOwner,
-          creator: renovateGithubAuthor,
-        })
-      ).filter(
-        (issue) =>
-          issue.pull_request === undefined &&
-          issue.title.includes("Dependency Dashboard")
-      );
+      const response = await this.octokit.search.issuesAndPullRequests({
+        q: `repo:${repoOwner}/${repoName} type:issue state:open in:title "Dependency Dashboard"`,
+      });
 
+      const issues = response.data.items;
       if (issues.length > 1) {
         logger.debug("");
         logger.debug(
-          `Multiple dependency dashboard issues found for repo ${repoName} and renovate bot ${renovateGithubAuthor}`
+          `Multiple dependency dashboard issues found for repo ${repoName}`
         );
         for (const issue of issues) {
           logger.debug(`Issue title: ${issue.title}`);
         }
         logger.debug("");
+
+        return issues.find((issue) => issue.user?.login.includes("renovate"));
       }
 
       return issues[0];
-    } catch {}
-    return undefined;
+    } catch (error) {
+      return undefined;
+    }
   }
 
   async fetchRepository(repoName: string, repoOwner: string) {

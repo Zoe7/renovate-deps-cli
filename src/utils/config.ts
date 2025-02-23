@@ -12,22 +12,6 @@ export const userConfig = {
     set: (token: string) => config.set("githubToken", token),
     delete: () => config.delete("githubToken"),
   },
-  defaultOwner: {
-    get: () => {
-      const org = config.get("defaultOwner");
-      return z.string().optional().parse(org);
-    },
-    set: (org: string) => config.set("defaultOwner", org),
-    delete: () => config.delete("defaultOwner"),
-  },
-  defaultRenovateGithubAuthor: {
-    get: () => {
-      const author = config.get("defaultRenovateAuthor");
-      return z.string().parse(author);
-    },
-    set: (author: string) => config.set("defaultRenovateAuthor", author),
-    delete: () => config.delete("defaultRenovateAuthor"),
-  },
   repoGroup: {
     get: (groupName: string) => {
       const group = config.get(`repoGroups.${groupName}`);
