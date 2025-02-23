@@ -11,41 +11,64 @@ export class OctokitService {
 
   constructor() {
     this.octokit = new Octokit({
+      // todo: handle error if this isn't set yet
       auth: userConfig.githubToken.get(),
+      log: {
+        debug: (message: string) => logger.debug(`    ${message}`),
+        info: (message: string) => logger.debug(`    ${message}`),
+        warn: (message: string) => logger.debug(`    ${message}`),
+        error: (message: string) => logger.debug(`    ${message}`),
+      },
     });
   }
 
-  async fetchRepos({
-    org,
-    reposToFilterBy,
+  async fetchReposForAuthenticatedUser({
+    owner,
   }: {
-    org: string | undefined;
-    reposToFilterBy?: string[] | undefined;
+    owner: string | undefined;
   }) {
-    const repos = (
-      await this.octokit.paginate(this.octokit.repos.listForAuthenticatedUser)
-    ).filter((repo) => {
-      const conditions: ((repo: Repository) => boolean)[] = [
-        // default conditions we want to be true for every repo
-        (repo) => repo.archived === false,
-      ];
+    try {
+      const repos = (
+        await this.octokit.paginate(this.octokit.repos.listForAuthenticatedUser)
+      ).filter((repo) => {
+        const conditions: ((repo: Repository) => boolean)[] = [
+          // default conditions we want to be true for every repo
+          (repo) => repo.archived === false,
+        ];
 
-      if (org) {
-        conditions.push((repo) => repo.owner.login === org);
+        if (owner) {
+          conditions.push((repo) => repo.owner.login === owner);
+        }
+
+        return conditions.every((condition) => condition(repo));
+      });
+
+      return repos;
+    } catch {
+      return [];
+    }
+  }
+
+  async fetchListOfRepositories({
+    repos,
+  }: {
+    repos: Array<{
+      owner: string;
+      name: string;
+    }>;
+  }) {
+    const fetchedRepos = [];
+    try {
+      for (const repo of repos) {
+        const response = await this.fetchRepository(repo.name, repo.owner);
+        if (response) {
+          fetchedRepos.push(response);
+        }
       }
-
-      if (reposToFilterBy) {
-        conditions.push(
-          (repo) =>
-            reposToFilterBy.includes(repo.full_name) ||
-            reposToFilterBy.includes(repo.name)
-        );
-      }
-
-      return conditions.every((condition) => condition(repo));
-    });
-
-    return repos;
+    } catch {
+      return [];
+    }
+    return fetchedRepos;
   }
 
   async fetchDependencyDashboard({
@@ -57,29 +80,44 @@ export class OctokitService {
     repoOwner: string;
     renovateGithubAuthor: string;
   }) {
-    const issues = (
-      await this.octokit.paginate(this.octokit.issues.listForRepo, {
-        repo: repoName,
-        owner: repoOwner,
-        creator: renovateGithubAuthor,
-      })
-    ).filter(
-      (issue) =>
-        issue.pull_request === undefined &&
-        issue.title.includes("Dependency Dashboard")
-    );
-
-    if (issues.length > 1) {
-      logger.debug("");
-      logger.debug(
-        `Multiple dependency dashboard issues found for repo ${repoName} and renovate bot ${renovateGithubAuthor}`
+    try {
+      const issues = (
+        await this.octokit.paginate(this.octokit.issues.listForRepo, {
+          repo: repoName,
+          owner: repoOwner,
+          creator: renovateGithubAuthor,
+        })
+      ).filter(
+        (issue) =>
+          issue.pull_request === undefined &&
+          issue.title.includes("Dependency Dashboard")
       );
-      for (const issue of issues) {
-        logger.debug(`Issue title: ${issue.title}`);
-      }
-      logger.debug("");
-    }
 
-    return issues[0];
+      if (issues.length > 1) {
+        logger.debug("");
+        logger.debug(
+          `Multiple dependency dashboard issues found for repo ${repoName} and renovate bot ${renovateGithubAuthor}`
+        );
+        for (const issue of issues) {
+          logger.debug(`Issue title: ${issue.title}`);
+        }
+        logger.debug("");
+      }
+
+      return issues[0];
+    } catch {}
+    return undefined;
+  }
+
+  async fetchRepository(repoName: string, repoOwner: string) {
+    try {
+      const response = await this.octokit.repos.get({
+        owner: repoOwner,
+        repo: repoName,
+      });
+      return response.data;
+    } catch {
+      return undefined;
+    }
   }
 }

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { extractUpdateInfo } from "./listDependencies.js";
+import { extractUpdateInfo } from "./scan.js";
 
 test("Update Node.js to v22", () => {
   const body = `- [ ] <!-- approve-branch=renovate/docker-dev-artifactory.workday.com-peakon-node-22.x -->chore(deps): [PEAKON-2396] Update Node.js to v22`;

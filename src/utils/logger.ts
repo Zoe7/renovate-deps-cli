@@ -4,8 +4,12 @@ import { symbols } from "./symbols.js";
 class Logger {
   #verbose: boolean = false;
 
-  isVerbose(verbose: boolean) {
+  setIsVerbose(verbose: boolean) {
     this.#verbose = verbose;
+  }
+
+  isVerbose() {
+    return this.#verbose;
   }
 
   info(...message: string[]) {

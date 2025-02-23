@@ -21,7 +21,7 @@
     "test": "vitest"
   },
   "bin": {
-    "renovate-deps-cli": "./dist/index.js"
+    "renovate-deps": "./dist/index.js"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.2.3",

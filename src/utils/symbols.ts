@@ -7,12 +7,14 @@ const symbolsDefault = {
   info: "ℹ",
   success: "✔",
   error: "✖",
+  warning: "!",
 };
 
 const symbolsFallback = {
   info: "i",
   success: "√",
   error: "×",
+  warning: "!",
 };
 
 export const symbols = isSupported ? symbolsDefault : symbolsFallback;

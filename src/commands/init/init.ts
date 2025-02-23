@@ -21,9 +21,7 @@ export async function init() {
   if (!keepExistingToken) {
     logger.info("");
     logger.info(
-      "To let the CLI pull data from your repositories and authenticate with GitHub, it will need a",
-      chalk.bold("Personal Access Token"),
-      "(classic)."
+      "To let the CLI pull data from your repositories and authenticate with GitHub, it will need a Personal Access Token (classic)."
     );
     logger.info(
       "Learn more about GitHub tokens and how to create one here:",
@@ -32,8 +30,8 @@ export async function init() {
       )
     );
     logger.info(
-      "\nPlease ensure the token has the following scope enabled:\n" +
-        "- repo (to access your repositories)\n"
+      "\nPlease ensure the token has the following scope enabled:\n",
+      "  - repo (to access your repositories)\n"
     );
 
     const promptedGithubToken = await password({
@@ -64,17 +62,18 @@ export async function init() {
   );
 
   logger.info("");
-  const org = await input({
-    message: "Github organization (optional):",
+  const owner = await input({
+    message: "Github Repository Owner (optional):",
   });
 
-  if (org.length > 0) {
-    userConfig.defaultOrg.set(org);
+  if (owner.length > 0) {
+    userConfig.defaultOwner.set(owner);
   } else {
-    userConfig.defaultOrg.delete();
+    userConfig.defaultOwner.delete();
   }
 
   logger.info("");
+
   const defaultRenovateGithubAuthor = await input({
     message: "Renovate GitHub author:",
     default: "renovate[bot]",

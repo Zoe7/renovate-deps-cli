@@ -1,30 +1,44 @@
 import { z } from "zod";
 import { logger } from "../../utils/logger.js";
 import chalk from "chalk";
-import ora from "ora";
 import { OctokitService } from "../../services/octokit.js";
 import { userConfig } from "../../utils/config.js";
+import { getSpinner } from "../../utils/spinner.js";
 
 export function getOptions(args: unknown) {
   const options = z
     .object({
-      org: z.string().optional(),
+      owner: z.string().optional(),
       renovateGithubAuthor: z.string().optional(),
       repos: z.array(z.string()).optional(),
       dependencies: z.array(z.string()).optional(),
+      verbose: z.boolean().catch(() => false),
     })
     .parse(args);
 
-  const org = options.org ?? userConfig.defaultOrg.get();
+  const reposToFilterBy = options.repos
+    ?.map((repo) => {
+      const [repoOwner, repoName, ...rest] = repo.split("/");
+      if (!repoName || !repoOwner || rest.length > 0) {
+        logger.debug(
+          `Skipping repo ${repo} because it is not valid, it should be in the format "owner/repo".`
+        );
+        return undefined;
+      }
+      return { owner: repoOwner, name: repoName };
+    })
+    .filter((repo) => repo !== undefined);
+
+  const owner = options.owner ?? userConfig.defaultOwner.get();
   const renovateGithubAuthor =
     options.renovateGithubAuthor ??
     userConfig.defaultRenovateGithubAuthor.get();
-
   return {
-    org,
+    owner,
     renovateGithubAuthor,
-    reposToFilterBy: options.repos,
+    reposToFilterBy,
     dependenciesToFilterBy: options.dependencies,
+    verbose: options.verbose,
   };
 }
 
@@ -179,50 +193,84 @@ export const extractUpdateInfo = (text: string) => {
   return pendingUpdates;
 };
 
-export async function listDependencies(args: unknown) {
-  const { org, renovateGithubAuthor, reposToFilterBy, dependenciesToFilterBy } =
-    getOptions(args);
+export async function scan(args: unknown) {
+  logger.info("");
+  const {
+    owner,
+    renovateGithubAuthor,
+    reposToFilterBy,
+    dependenciesToFilterBy,
+    verbose,
+  } = getOptions(args);
+
+  if (verbose) {
+    logger.setIsVerbose(true);
+  }
 
   const octokitService = new OctokitService();
 
-  const fetchingReposSpinner = ora(
+  const fetchingReposSpinner = getSpinner(
     "Fetching list of repositories to analyze"
-  ).start();
+  );
 
-  const repos = await octokitService.fetchRepos({
-    org,
-    reposToFilterBy,
-  });
+  fetchingReposSpinner.start();
+
+  const repos = reposToFilterBy
+    ? await octokitService.fetchListOfRepositories({ repos: reposToFilterBy })
+    : await octokitService.fetchReposForAuthenticatedUser({
+        owner,
+      });
 
   fetchingReposSpinner.stop();
 
   if (repos.length === 0) {
-    logger.info("");
-    logger.info("");
     logger.info(
       "Did not find any repositories accessible by the CLI using the given configuration options:"
     );
-    logger.info(`- Organization: ${org ?? "N/A"}`);
-    logger.info(
-      `- Repositories to filter by: ${
-        reposToFilterBy ? reposToFilterBy.join(", ") : "N/A"
-      }`
-    );
+
+    if (owner) {
+      logger.info(`- Owner: ${owner}`);
+    } else {
+      logger.info(`- Owner: N/A`);
+    }
+
+    if (reposToFilterBy) {
+      logger.info(`- Repositories to filter by: ${reposToFilterBy.join(", ")}`);
+    } else {
+      logger.info(`- Repositories to filter by: N/A`);
+    }
+
+    if (dependenciesToFilterBy) {
+      logger.info(
+        `- Dependencies to filter by: ${dependenciesToFilterBy.join(", ")}`
+      );
+    } else {
+      logger.info(`- Dependencies to filter by: N/A`);
+    }
+
+    if (renovateGithubAuthor) {
+      logger.info(`- Renovate GitHub author: ${renovateGithubAuthor}`);
+    } else {
+      logger.info(`- Renovate GitHub author: N/A`);
+    }
+
+    logger.info("");
     return;
   }
 
-  logger.debug("");
   logger.debug(
-    `Found ${repos.length} repository${
-      repos.length > 1 ? "s" : ""
-    } accessible by the CLI using the given configuration options.`
+    `Found ${repos.length} repositories accessible by the CLI using the given configuration options.`
   );
   logger.debug("");
 
+  let hasUpdates = false;
+
   for (const repo of repos) {
-    const fetchingDependencyDashboardSpinner = ora(
+    const fetchingDependencyDashboardSpinner = getSpinner(
       `Fetching dependency dashboard for ${repo.full_name}`
-    ).start();
+    );
+
+    fetchingDependencyDashboardSpinner.start();
 
     const dependencyDashboard = await octokitService.fetchDependencyDashboard({
       repoName: repo.name,
@@ -233,14 +281,13 @@ export async function listDependencies(args: unknown) {
     fetchingDependencyDashboardSpinner.stop();
 
     if (!dependencyDashboard) {
-      logger.debug("");
       logger.debug(`${repo.full_name}`);
       logger.debug("  Not using Renovate");
+      logger.debug("");
       continue;
     }
 
     if (!dependencyDashboard.body) {
-      logger.debug("");
       logger.debug(`${repo.full_name}`);
       logger.debug(
         `  issue: ${dependencyDashboard.title} - ${dependencyDashboard.user?.login}`
@@ -248,12 +295,13 @@ export async function listDependencies(args: unknown) {
       logger.debug(
         `  dependency dashboard body is unavailable. Can't retrieve list of updates. Skipping this repository.`
       );
+      logger.debug("");
       continue;
     }
 
-    const updates = extractUpdateInfo(dependencyDashboard.body);
-    const filteredUpdates = dependenciesToFilterBy
-      ? updates.filter((update) => {
+    const allUpdates = extractUpdateInfo(dependencyDashboard.body);
+    const updates = dependenciesToFilterBy
+      ? allUpdates.filter((update) => {
           if (
             update.dependency &&
             dependenciesToFilterBy.includes(update.dependency)
@@ -270,44 +318,59 @@ export async function listDependencies(args: unknown) {
 
           return false;
         })
-      : updates;
+      : allUpdates;
 
-    if (filteredUpdates.length === 0) {
-      logger.debug("");
+    if (updates.length === 0) {
       logger.debug(
-        chalk.cyan(
+        chalk.blue(
           `${repo.full_name} - ${chalk.underline(dependencyDashboard.html_url)}`
         )
       );
       logger.debug("  No updates found");
+      logger.debug("");
       continue;
     }
 
-    logger.info("");
     logger.info(
-      chalk.cyan(
+      chalk.blue(
         `${repo.full_name} - ${chalk.underline(dependencyDashboard.html_url)}`
       )
     );
-    for (const update of filteredUpdates) {
-      const logInfo = [
-        `  - Update ${update.dependency}`,
-        update.fromVersion ? `from ${update.fromVersion}` : null,
-        update.toVersion ? `to ${update.toVersion}` : null,
-        update.updateType ? `(${update.updateType})` : null,
-        update.packages.length > 0
-          ? chalk.gray(`[${update.packages.join(", ")}]`)
-          : null,
-        update.pullRequest
-          ? `- ${chalk.underline(
-              `${repo.html_url}/pull/${update.pullRequest}`
-            )}`
-          : null,
-      ]
-        .filter(Boolean)
-        .join(" ");
 
-      logger.info(logInfo);
+    for (const update of updates) {
+      hasUpdates = true;
+      const logInfo: string[] = [];
+
+      logInfo.push(`  - Update ${update.dependency}`);
+      if (update.fromVersion) {
+        logInfo.push(`from ${update.fromVersion}`);
+      }
+
+      if (update.toVersion) {
+        logInfo.push(`to ${update.toVersion}`);
+      }
+
+      if (update.updateType) {
+        logInfo.push(`(${update.updateType})`);
+      }
+
+      if (update.packages.length > 0) {
+        logInfo.push(chalk.gray(`[${update.packages.join(", ")}]`));
+      }
+
+      if (update.pullRequest) {
+        logInfo.push(
+          `- ${chalk.underline(`${repo.html_url}/pull/${update.pullRequest}`)}`
+        );
+      }
+
+      logger.info(logInfo.join(" "));
     }
+
+    logger.info("");
+  }
+
+  if (!hasUpdates) {
+    logger.info(`Scanned ${repos.length} repositories. No updates found.\n`);
   }
 }

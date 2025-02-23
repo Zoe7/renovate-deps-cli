@@ -12,13 +12,13 @@ export const userConfig = {
     set: (token: string) => config.set("githubToken", token),
     delete: () => config.delete("githubToken"),
   },
-  defaultOrg: {
+  defaultOwner: {
     get: () => {
-      const org = config.get("defaultOrg");
+      const org = config.get("defaultOwner");
       return z.string().optional().parse(org);
     },
-    set: (org: string) => config.set("defaultOrg", org),
-    delete: () => config.delete("defaultOrg"),
+    set: (org: string) => config.set("defaultOwner", org),
+    delete: () => config.delete("defaultOwner"),
   },
   defaultRenovateGithubAuthor: {
     get: () => {
@@ -27,6 +27,52 @@ export const userConfig = {
     },
     set: (author: string) => config.set("defaultRenovateAuthor", author),
     delete: () => config.delete("defaultRenovateAuthor"),
+  },
+  repoGroup: {
+    get: (groupName: string) => {
+      const group = config.get(`repoGroups.${groupName}`);
+      return z
+        .array(
+          z.object({
+            owner: z.string(),
+            name: z.string(),
+            url: z.string(),
+          })
+        )
+        .optional()
+        .parse(group);
+    },
+    getAll: () => {
+      const groups = config.get("repoGroups");
+      const parsedGroups = z
+        .record(
+          z.array(
+            z.object({
+              owner: z.string(),
+              name: z.string(),
+              url: z.string(),
+            })
+          )
+        )
+        .optional()
+        .parse(groups);
+
+      if (!parsedGroups) {
+        return [];
+      }
+
+      return Object.entries(parsedGroups).map(([groupName, repos]) => ({
+        groupName,
+        repos,
+      }));
+    },
+    set: (
+      groupName: string,
+      group: Array<{ owner: string; name: string; url: string }>
+    ) => {
+      config.set(`repoGroups.${groupName}`, group);
+    },
+    delete: (groupName: string) => config.delete(`repoGroups.${groupName}`),
   },
 };
 
