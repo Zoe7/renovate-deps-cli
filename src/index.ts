@@ -10,6 +10,7 @@ import { deleteRepoGroup } from "./commands/repoGroups/deleteRepoGroup.js";
 import { listRepoGroups } from "./commands/repoGroups/listRepoGroups.js";
 import { scanGroup } from "./commands/scans/scanGroup/scanGroup.js";
 import { scan } from "./commands/scans/scan/scan.js";
+import { listRepos } from "./commands/listRepos/listRepos.js";
 
 const program = new Command();
 
@@ -98,10 +99,18 @@ program
   );
 
 program
+  .command("list-repos")
+  .description(
+    "Display the repositories accessible to the authenticated user.\nThese repositories are the default targets for the `scan` command unless filtering options are used.\nThis command can also help determine which repositories to include in repository groups.\n"
+  )
+  .option("--verbose", "Print additional debug information to the console\n")
+  .action(listRepos);
+
+program
   .command("cleanup")
   .action(withExitPromptErrorHandling(cleanup))
   .description(
-    "Cleanup the persisted configuration used by the CLI from your machine"
+    "Cleanup the persisted configuration used by the CLI from your machine\n"
   );
 
 // TODO: remove this temp command for me to debug stuff
