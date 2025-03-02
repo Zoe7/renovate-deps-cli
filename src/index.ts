@@ -113,13 +113,4 @@ program
     "Cleanup the persisted configuration used by the CLI from your machine\n"
   );
 
-// TODO: remove this temp command for me to debug stuff
-program
-  .command("checkConfig")
-  .action(() => {
-    logger.info(`githubToken: ${userConfig.githubToken.get()}`);
-    logger.info(`repoGroups: ${userConfig.repoGroup.getAll()}`);
-  })
-  .description("Run the CLI");
-
 program.parse(process.argv);
