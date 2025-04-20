@@ -23,21 +23,21 @@ test("Update dependency eslint from 8.57.1 to 9.19.0", () => {
     dependency: "eslint",
     fromVersion: "8.57.1",
     toVersion: "9.19.0",
-    updateType: null,
+    updateType: "major",
     pullRequest: null,
     packages: [],
   });
 });
 
-test("Update dependency js-yaml from 3.14.1 to 4.1.0", () => {
-  const body = `- [ ] <!-- approve-branch=renovate/js-yaml-4.x -->chore(deps): [PEAKON-2396] Update dependency js-yaml from 3.14.1 to 4.1.0`;
+test("Update dependency js-yaml from 3.14.1 to 3.14.2", () => {
+  const body = `- [ ] <!-- approve-branch=renovate/js-yaml-4.x -->chore(deps): [PEAKON-2396] Update dependency js-yaml from 3.14.1 to 3.14.2`;
   const result = extractUpdateInfo(body);
 
   expect(result[0]).toMatchObject({
     dependency: "js-yaml",
     fromVersion: "3.14.1",
-    toVersion: "4.1.0",
-    updateType: null,
+    toVersion: "3.14.2",
+    updateType: "patch",
     pullRequest: null,
     packages: [],
   });
@@ -51,7 +51,7 @@ test("Update dependency react-redux from 9.1.2 to 9.2.0", () => {
     dependency: "react-redux",
     fromVersion: "9.1.2",
     toVersion: "9.2.0",
-    updateType: null,
+    updateType: "minor",
     pullRequest: "16761",
     packages: [],
   });
@@ -129,7 +129,7 @@ test("Update module gopkg.in/DataDog/dd-trace-go.v1 from v1.70.1 to v1.71.0", ()
     dependency: "gopkg.in/DataDog/dd-trace-go.v1",
     fromVersion: "v1.70.1",
     toVersion: "v1.71.0",
-    updateType: null,
+    updateType: "minor",
     pullRequest: "54",
     packages: [],
   });
@@ -185,7 +185,7 @@ test("Update dependency importlib-resources from 1.5.0 to 6.5.2", () => {
     dependency: "importlib-resources",
     fromVersion: "1.5.0",
     toVersion: "6.5.2",
-    updateType: null,
+    updateType: "major",
     pullRequest: null,
     packages: [],
   });
@@ -213,7 +213,7 @@ test("Update dependency @peakon/components from 46.0.0 to 47.1.1", () => {
     dependency: "@peakon/components",
     fromVersion: "46.0.0",
     toVersion: "47.1.1",
-    updateType: null,
+    updateType: "major",
     pullRequest: "16465",
     packages: [],
   });
@@ -227,7 +227,7 @@ test("Update dependency eslint-config-prettier from 9.1.0 to 10.0.1", () => {
     dependency: "eslint-config-prettier",
     fromVersion: "9.1.0",
     toVersion: "10.0.1",
-    updateType: null,
+    updateType: "major",
     pullRequest: "17032",
     packages: [],
   });
@@ -315,7 +315,7 @@ test("Update dependency stylelint with packages", () => {
     dependency: "stylelint",
     fromVersion: "1.0.0",
     toVersion: "2.0.0",
-    updateType: null,
+    updateType: "major",
     pullRequest: null,
     packages: ["stylelint-config-recommended", "stylelint-config-standard"],
   });
