@@ -14,7 +14,8 @@
     "url": "https://github.com/Zoe7"
   },
   "license": "Apache-2.0",
-  "description": "",
+  "description": "`renovate-deps` is a CLI tool that helps provide an overview of the different pending Renovate dependency updates across multiple repositories.",
+  "repository": "https://github.com/Zoe7/renovate-deps-cli",
   "scripts": {
     "build": "npx tsc",
     "dev": "npx tsc -w",
