@@ -134,15 +134,10 @@ export async function scan(args: unknown) {
 
     const updates = extractUpdateInfo(dependencyDashboard.body);
 
-    const filteredUpdates = options.updateType
-      ? updates.filter((update) => {
-          return update.updateType === options.updateType;
-        })
-      : updates;
-
     printUpdates({
-      updates: filteredUpdates,
+      updates,
       dependenciesToFilterBy: options.dependenciesToFilterBy,
+      updateType: options.updateType,
       dependencyDashboardUrl: dependencyDashboard.html_url,
       repo: {
         name: repo.name,

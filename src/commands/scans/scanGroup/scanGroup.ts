@@ -68,16 +68,11 @@ export async function scanGroup(...args: Array<unknown>) {
 
     const updates = extractUpdateInfo(dependencyDashboard.body);
 
-    const filteredUpdates = options.updateType
-      ? updates.filter((update) => {
-          return update.updateType === options.updateType;
-        })
-      : updates;
-
     printUpdates({
-      updates: filteredUpdates,
+      updates,
       dependencyDashboardUrl: dependencyDashboard.html_url,
       dependenciesToFilterBy: options.dependencies,
+      updateType: options.updateType,
       repo,
     });
   }

@@ -5,11 +5,13 @@ import { UpdateInfo } from "./extractUpdateInfo.js";
 export function printUpdates({
   updates: allUpdates,
   dependenciesToFilterBy,
+  updateType,
   dependencyDashboardUrl,
   repo,
 }: {
   updates: Array<UpdateInfo>;
   dependenciesToFilterBy?: Array<string> | undefined;
+  updateType?: "major" | "minor" | "patch" | undefined;
   dependencyDashboardUrl: string;
   repo: {
     name: string;
@@ -20,29 +22,38 @@ export function printUpdates({
   const lowerCaseDependenciesToFilterBy = dependenciesToFilterBy?.map((d) =>
     d.toLowerCase()
   );
-  const updates = lowerCaseDependenciesToFilterBy
-    ? allUpdates.filter((update) => {
-        if (
-          update.dependency &&
-          lowerCaseDependenciesToFilterBy.includes(
-            update.dependency.toLocaleLowerCase()
-          )
-        ) {
-          return true;
-        }
+  const updates =
+    lowerCaseDependenciesToFilterBy || updateType
+      ? allUpdates.filter((update) => {
+          if (updateType && update.updateType !== updateType) {
+            return false;
+          }
 
-        if (
-          update.packages &&
-          update.packages.some((p) =>
-            lowerCaseDependenciesToFilterBy.includes(p.toLocaleLowerCase())
-          )
-        ) {
-          return true;
-        }
+          if (!lowerCaseDependenciesToFilterBy) {
+            return true;
+          }
 
-        return false;
-      })
-    : allUpdates;
+          if (
+            update.dependency &&
+            lowerCaseDependenciesToFilterBy.includes(
+              update.dependency.toLocaleLowerCase()
+            )
+          ) {
+            return true;
+          }
+
+          if (
+            update.packages &&
+            update.packages.some((p) =>
+              lowerCaseDependenciesToFilterBy.includes(p.toLocaleLowerCase())
+            )
+          ) {
+            return true;
+          }
+
+          return false;
+        })
+      : allUpdates;
 
   logger.info(
     chalk.blue(
@@ -53,7 +64,7 @@ export function printUpdates({
   if (updates.length === 0) {
     logger.info(
       chalk.dim(
-        dependenciesToFilterBy
+        updates.length !== allUpdates.length
           ? "  - No pending updates matching the dependency filter"
           : "  - No pending updates"
       )
