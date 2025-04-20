@@ -40,15 +40,9 @@ export function getOptions(args: unknown) {
 
 export async function scan(args: unknown) {
   logger.info("");
-  const {
-    owner,
-    reposToFilterBy,
-    dependenciesToFilterBy,
-    verbose,
-    updateType,
-  } = getOptions(args);
+  const options = getOptions(args);
 
-  if (verbose) {
+  if (options.verbose) {
     logger.setIsVerbose(true);
   }
 
@@ -60,10 +54,12 @@ export async function scan(args: unknown) {
 
   fetchingReposSpinner.start();
 
-  const repos = reposToFilterBy
-    ? await octokitService.fetchListOfRepositories({ repos: reposToFilterBy })
+  const repos = options.reposToFilterBy
+    ? await octokitService.fetchListOfRepositories({
+        repos: options.reposToFilterBy,
+      })
     : await octokitService.fetchReposForAuthenticatedUser({
-        owner,
+        owner: options.owner,
       });
 
   fetchingReposSpinner.stop();
@@ -73,21 +69,25 @@ export async function scan(args: unknown) {
       "Did not find any repositories accessible by the CLI using the given configuration options:"
     );
 
-    if (owner) {
-      logger.info(`- Owner: ${owner}`);
+    if (options.owner) {
+      logger.info(`- Owner: ${options.owner}`);
     } else {
       logger.info(`- Owner: N/A`);
     }
 
-    if (reposToFilterBy) {
-      logger.info(`- Repositories to filter by: ${reposToFilterBy.join(", ")}`);
+    if (options.reposToFilterBy) {
+      logger.info(
+        `- Repositories to filter by: ${options.reposToFilterBy.join(", ")}`
+      );
     } else {
       logger.info(`- Repositories to filter by: N/A`);
     }
 
-    if (dependenciesToFilterBy) {
+    if (options.dependenciesToFilterBy) {
       logger.info(
-        `- Dependencies to filter by: ${dependenciesToFilterBy.join(", ")}`
+        `- Dependencies to filter by: ${options.dependenciesToFilterBy.join(
+          ", "
+        )}`
       );
     } else {
       logger.info(`- Dependencies to filter by: N/A`);
@@ -134,15 +134,15 @@ export async function scan(args: unknown) {
 
     const updates = extractUpdateInfo(dependencyDashboard.body);
 
-    const filteredUpdates = updateType
+    const filteredUpdates = options.updateType
       ? updates.filter((update) => {
-          return update.updateType === updateType;
+          return update.updateType === options.updateType;
         })
       : updates;
 
     printUpdates({
       updates: filteredUpdates,
-      dependenciesToFilterBy,
+      dependenciesToFilterBy: options.dependenciesToFilterBy,
       dependencyDashboardUrl: dependencyDashboard.html_url,
       repo: {
         name: repo.name,
