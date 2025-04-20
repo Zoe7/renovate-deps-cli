@@ -1,10 +1,8 @@
 #! /usr/bin/env node
 import { Command, Option } from "commander";
-import { userConfig } from "./utils/config.js";
 import { init } from "./commands/init/init.js";
 import { cleanup } from "./commands/cleanup/cleanup.js";
 import { withExitPromptErrorHandling } from "./utils/withExitPromptErrorHandling.js";
-import { logger } from "./utils/logger.js";
 import { createRepoGroups } from "./commands/repoGroups/createRepoGroups.js";
 import { deleteRepoGroup } from "./commands/repoGroups/deleteRepoGroup.js";
 import { listRepoGroups } from "./commands/repoGroups/listRepoGroups.js";
