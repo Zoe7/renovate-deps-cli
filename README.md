@@ -65,12 +65,13 @@ npx renovate-deps repo-groups list
 ### Scan a repository group for pending updates
 
 ```sh
-npx renovate-deps repo-groups scan <groupName> [--dependencies dependency1 dependency2] [--verbose]
+npx renovate-deps repo-groups scan <groupName> [--dependencies dependency1 dependency2] [--updateType major|minor|patch] [--verbose]
 ```
 
 #### Options:
 
 - `-d, --dependencies` → Filter updates by specific dependencies
+- `--ut, --update-type` → Filter updates by update type. Can be one of 'major', 'minor' or 'patch'
 - `--verbose` → Show debug info
 
 ## `scan`
@@ -78,7 +79,7 @@ npx renovate-deps repo-groups scan <groupName> [--dependencies dependency1 depen
 List pending dependency updates for repositories that the CLI has access to using GitHub's [list repositories API](https://octokit.github.io/rest.js/v21/#repos-list-for-authenticated-user) and that match the specified filters.
 
 ```sh
-npx renovate-deps scan [--repos owner/repo1] [--owner owner-name] [--dependencies dependency1 dependency2] [--verbose]
+npx renovate-deps scan [--repos owner/repo1] [--owner owner-name] [--dependencies dependency1 dependency2] [--updateType major|minor|patch] [--verbose]
 ```
 
 #### Options:
@@ -86,6 +87,7 @@ npx renovate-deps scan [--repos owner/repo1] [--owner owner-name] [--dependencie
 - `-r, --repos` → List of repositories to scan (mutually exclusive with `--owner`)
 - `-o, --owner` → Scan all repositories for a specific owner (mutually exclusive with `--repos`)
 - `-d, --dependencies` → Filter updates by dependencies
+- `--ut, --update-type` → Filter updates by update type. Can be one of 'major', 'minor' or 'patch'
 - `--verbose` → Show debug info
 
 #### Example Usage:

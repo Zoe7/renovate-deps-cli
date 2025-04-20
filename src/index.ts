@@ -64,6 +64,12 @@ program
         "-d, --dependencies <dependencies...>",
         "The dependencies for which to find pending updates\n"
       )
+      .addOption(
+        new Option(
+          "--ut, --update-type <updateType>",
+          "The type of dependency update to filter by. Can be one of 'major', 'minor' or 'patch'\n"
+        ).choices(["major", "minor", "patch"])
+      )
       .option(
         "--verbose",
         "Print additional debug information to the console\n"
@@ -89,6 +95,12 @@ program
   .option(
     "-d, --dependencies <dependencies...>",
     "The dependencies for which to find pending updates\n"
+  )
+  .addOption(
+    new Option(
+      "--ut, --update-type <updateType>",
+      "The type of dependency update to filter by. Can be one of 'major', 'minor' or 'patch'\n"
+    ).choices(["major", "minor", "patch"])
   )
   .option("--verbose", "Print additional debug information to the console\n")
   .action(scan)

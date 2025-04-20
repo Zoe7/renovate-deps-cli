@@ -4,7 +4,7 @@ export type UpdateInfo = {
   dependency: string | null;
   fromVersion: string | null;
   toVersion: string | null;
-  updateType: string | null;
+  updateType: "major" | "minor" | "patch" | null;
   pullRequest: string | null;
   packages: string[];
 };
@@ -123,6 +123,41 @@ const extractVersions = (text: string) => {
   return { fromVersion: null, toVersion: null, remainingText: text };
 };
 
+const detectUpdateType = (fromVersion: string, toVersion: string) => {
+  const parseVersion = (version: string) =>
+    version.replace(/^v/, "").split(".").map(Number);
+
+  const [fromMajor, fromMinor, fromPatch] = parseVersion(fromVersion);
+  const [toMajor, toMinor, toPatch] = parseVersion(toVersion);
+
+  if (
+    fromMajor === undefined ||
+    isNaN(fromMajor) ||
+    fromMinor === undefined ||
+    isNaN(fromMinor) ||
+    fromPatch === undefined ||
+    isNaN(fromPatch) ||
+    toMajor === undefined ||
+    isNaN(toMajor) ||
+    toMinor === undefined ||
+    isNaN(toMinor) ||
+    toPatch === undefined ||
+    isNaN(toPatch)
+  ) {
+    return null;
+  }
+
+  if (toMajor > fromMajor) {
+    return "major";
+  } else if (toMinor > fromMinor) {
+    return "minor";
+  } else if (toPatch > fromPatch) {
+    return "patch";
+  }
+
+  return null;
+};
+
 export const extractUpdateInfo = (text: string) => {
   const pendingUpdates: UpdateInfo[] = [];
 
@@ -138,11 +173,18 @@ export const extractUpdateInfo = (text: string) => {
     const versionsInfo = extractVersions(packagesInfo.remainingText);
     const dependencyInfo = extractDependency(versionsInfo.remainingText);
 
+    const { fromVersion, toVersion } = versionsInfo;
+
+    const detectedUpdateType =
+      fromVersion && toVersion
+        ? detectUpdateType(fromVersion, toVersion)
+        : null;
+
     pendingUpdates.push({
       dependency: dependencyInfo.dependency,
       fromVersion: versionsInfo.fromVersion,
       toVersion: versionsInfo.toVersion,
-      updateType: updateTypeInfo.updateType,
+      updateType: updateTypeInfo.updateType ?? detectedUpdateType,
       pullRequest: pullRequestInfo.pullRequest,
       packages: packagesInfo.packages,
     });

@@ -11,6 +11,7 @@ export function getOptions(args: unknown) {
       owner: z.string().optional(),
       repos: z.array(z.string()).optional(),
       dependencies: z.array(z.string()).optional(),
+      updateType: z.enum(["major", "minor", "patch"]).optional(),
       verbose: z.boolean().catch(() => false),
     })
     .parse(args);
@@ -33,13 +34,19 @@ export function getOptions(args: unknown) {
     reposToFilterBy,
     dependenciesToFilterBy: options.dependencies,
     verbose: options.verbose,
+    updateType: options.updateType,
   };
 }
 
 export async function scan(args: unknown) {
   logger.info("");
-  const { owner, reposToFilterBy, dependenciesToFilterBy, verbose } =
-    getOptions(args);
+  const {
+    owner,
+    reposToFilterBy,
+    dependenciesToFilterBy,
+    verbose,
+    updateType,
+  } = getOptions(args);
 
   if (verbose) {
     logger.setIsVerbose(true);
@@ -127,8 +134,14 @@ export async function scan(args: unknown) {
 
     const updates = extractUpdateInfo(dependencyDashboard.body);
 
+    const filteredUpdates = updateType
+      ? updates.filter((update) => {
+          return update.updateType === updateType;
+        })
+      : updates;
+
     printUpdates({
-      updates,
+      updates: filteredUpdates,
       dependenciesToFilterBy,
       dependencyDashboardUrl: dependencyDashboard.html_url,
       repo: {

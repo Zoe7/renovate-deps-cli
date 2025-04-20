@@ -16,6 +16,7 @@ export async function scanGroup(...args: Array<unknown>) {
       z.object({
         verbose: z.boolean().catch(false),
         dependencies: z.array(z.string()).optional(),
+        updateType: z.enum(["major", "minor", "patch"]).optional(),
       }),
     ])
     .rest(z.unknown())
@@ -67,8 +68,14 @@ export async function scanGroup(...args: Array<unknown>) {
 
     const updates = extractUpdateInfo(dependencyDashboard.body);
 
+    const filteredUpdates = options.updateType
+      ? updates.filter((update) => {
+          return update.updateType === options.updateType;
+        })
+      : updates;
+
     printUpdates({
-      updates,
+      updates: filteredUpdates,
       dependencyDashboardUrl: dependencyDashboard.html_url,
       dependenciesToFilterBy: options.dependencies,
       repo,
