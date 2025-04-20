@@ -7,12 +7,14 @@ export function printUpdates({
   dependenciesToFilterBy,
   updateType,
   dependencyDashboardUrl,
+  quiet,
   repo,
 }: {
   updates: Array<UpdateInfo>;
   dependenciesToFilterBy?: Array<string> | undefined;
   updateType?: "major" | "minor" | "patch" | undefined;
   dependencyDashboardUrl: string;
+  quiet: boolean;
   repo: {
     name: string;
     owner: string;
@@ -54,6 +56,10 @@ export function printUpdates({
           return false;
         })
       : allUpdates;
+
+  if (quiet && updates.length === 0) {
+    return;
+  }
 
   logger.info(
     chalk.blue(

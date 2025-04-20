@@ -17,6 +17,7 @@ export async function scanGroup(...args: Array<unknown>) {
         verbose: z.boolean().catch(false),
         dependencies: z.array(z.string()).optional(),
         updateType: z.enum(["major", "minor", "patch"]).optional(),
+        quiet: z.boolean().catch(() => false),
       }),
     ])
     .rest(z.unknown())
@@ -73,6 +74,7 @@ export async function scanGroup(...args: Array<unknown>) {
       dependencyDashboardUrl: dependencyDashboard.html_url,
       dependenciesToFilterBy: options.dependencies,
       updateType: options.updateType,
+      quiet: options.quiet,
       repo,
     });
   }

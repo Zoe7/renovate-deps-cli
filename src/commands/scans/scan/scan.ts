@@ -13,6 +13,7 @@ export function getOptions(args: unknown) {
       dependencies: z.array(z.string()).optional(),
       updateType: z.enum(["major", "minor", "patch"]).optional(),
       verbose: z.boolean().catch(() => false),
+      quiet: z.boolean().catch(() => false),
     })
     .parse(args);
 
@@ -35,6 +36,7 @@ export function getOptions(args: unknown) {
     dependenciesToFilterBy: options.dependencies,
     verbose: options.verbose,
     updateType: options.updateType,
+    quiet: options.quiet,
   };
 }
 
@@ -139,6 +141,7 @@ export async function scan(args: unknown) {
       dependenciesToFilterBy: options.dependenciesToFilterBy,
       updateType: options.updateType,
       dependencyDashboardUrl: dependencyDashboard.html_url,
+      quiet: options.quiet,
       repo: {
         name: repo.name,
         owner: repo.owner.login,

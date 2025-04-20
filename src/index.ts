@@ -71,6 +71,10 @@ program
         ).choices(["major", "minor", "patch"])
       )
       .option(
+        "-q, --quiet",
+        "Only print the repositories that have pending updates. Without this flag, all repositories scanned will be printed, even if there are no pending updates.\n"
+      )
+      .option(
         "--verbose",
         "Print additional debug information to the console\n"
       )
@@ -101,6 +105,10 @@ program
       "--ut, --update-type <updateType>",
       "The type of dependency update to filter by. Can be one of 'major', 'minor' or 'patch'\n"
     ).choices(["major", "minor", "patch"])
+  )
+  .option(
+    "-q, --quiet",
+    "Only print the repositories that have pending updates. Without this flag, all repositories scanned will be printed, even if there are no pending updates.\n"
   )
   .option("--verbose", "Print additional debug information to the console\n")
   .action(scan)

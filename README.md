@@ -72,6 +72,7 @@ npx renovate-deps repo-groups scan <groupName> [--dependencies dependency1 depen
 
 - `-d, --dependencies` → Filter updates by specific dependencies
 - `--ut, --update-type` → Filter updates by update type. Can be one of 'major', 'minor' or 'patch'
+- `-q, --quiet` → Only print repositories with pending updates. Useful when scanning many repositories with very specific filters.
 - `--verbose` → Show debug info
 
 ## `scan`
@@ -88,6 +89,7 @@ npx renovate-deps scan [--repos owner/repo1] [--owner owner-name] [--dependencie
 - `-o, --owner` → Scan all repositories for a specific owner (mutually exclusive with `--repos`)
 - `-d, --dependencies` → Filter updates by dependencies
 - `--ut, --update-type` → Filter updates by update type. Can be one of 'major', 'minor' or 'patch'
+- `-q, --quiet` → Only print repositories with pending updates. Useful when scanning many repositories with very specific filters.
 - `--verbose` → Show debug info
 
 #### Example Usage:
