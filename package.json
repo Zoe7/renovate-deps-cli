@@ -29,7 +29,7 @@
     "@octokit/plugin-throttling": "^10.0.0",
     "@octokit/rest": "^21.1.1",
     "chalk": "^5.4.1",
-    "commander": "^13.1.0",
+    "commander": "^14.0.0",
     "conf": "^13.1.0",
     "ora": "^8.2.0",
     "zod": "^3.24.3"
