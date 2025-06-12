@@ -1,12 +1,12 @@
 {
   "name": "renovate-deps",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
       "name": "renovate-deps",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "license": "Apache-2.0",
       "dependencies": {
         "@inquirer/prompts": "^7.4.1",
@@ -16,7 +16,7 @@
         "commander": "^13.1.0",
         "conf": "^13.1.0",
         "ora": "^8.2.0",
-        "zod": "^3.24.3"
+        "zod": "^3.25.63"
       },
       "bin": {
         "renovate-deps": "dist/index.js"
@@ -2710,9 +2710,9 @@
       }
     },
     "node_modules/zod": {
-      "version": "3.24.3",
-      "resolved": "https://registry.npmjs.org/zod/-/zod-3.24.3.tgz",
-      "integrity": "sha512-HhY1oqzWCQWuUqvBFnsyrtZRhyPeR7SUGv+C4+MsisMuVfSPx8HpwWqH8tRahSlt6M3PiFAcoeFhZAqIXTxoSg==",
+      "version": "3.25.63",
+      "resolved": "https://registry.npmjs.org/zod/-/zod-3.25.63.tgz",
+      "integrity": "sha512-3ttCkqhtpncYXfP0f6dsyabbYV/nEUW+Xlu89jiXbTBifUfjaSqXOG6JnQPLtqt87n7KAmnMqcjay6c0Wq0Vbw==",
       "license": "MIT",
       "funding": {
         "url": "https://github.com/sponsors/colinhacks"
