@@ -32,7 +32,7 @@
     "commander": "^13.1.0",
     "conf": "^13.1.0",
     "ora": "^8.2.0",
-    "zod": "^3.24.3"
+    "zod": "^3.25.64"
   },
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.5",
