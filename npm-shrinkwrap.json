@@ -1,12 +1,12 @@
 {
   "name": "renovate-deps",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
       "name": "renovate-deps",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "license": "Apache-2.0",
       "dependencies": {
         "@inquirer/prompts": "^7.4.1",
@@ -22,7 +22,7 @@
         "renovate-deps": "dist/index.js"
       },
       "devDependencies": {
-        "@tsconfig/strictest": "^2.0.5",
+        "@tsconfig/strictest": "^2.0.8",
         "@types/node": "^22.14.1",
         "typescript": "^5.8.3",
         "vitest": "^3.1.1"
@@ -1306,9 +1306,9 @@
       ]
     },
     "node_modules/@tsconfig/strictest": {
-      "version": "2.0.5",
-      "resolved": "https://registry.npmjs.org/@tsconfig/strictest/-/strictest-2.0.5.tgz",
-      "integrity": "sha512-ec4tjL2Rr0pkZ5hww65c+EEPYwxOi4Ryv+0MtjeaSQRJyq322Q27eOQiFbuNgw2hpL4hB1/W/HBGk3VKS43osg==",
+      "version": "2.0.8",
+      "resolved": "https://registry.npmjs.org/@tsconfig/strictest/-/strictest-2.0.8.tgz",
+      "integrity": "sha512-XnQ7vNz5HRN0r88GYf1J9JJjqtZPiHt2woGJOo2dYqyHGGcd6OLGqSlBB6p1j9mpzja6Oe5BoPqWmeDx6X9rLw==",
       "dev": true,
       "license": "MIT"
     },
